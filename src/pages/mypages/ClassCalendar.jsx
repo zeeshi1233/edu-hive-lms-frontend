@@ -10,7 +10,6 @@ import {
   extractList,
   getCourseId,
   getTeacherName,
-  loadScheduledClasses,
   mergeSessionLists,
   persistScheduledClasses,
 } from "../../utils/lmsData";
@@ -80,45 +79,56 @@ export default function ClassCalendar() {
   const loadCalendarData = async () => {
     setLoading(true);
     setError("");
-    const collectedSessions = [];
 
     try {
-      for (const url of ["/api/admin/sessions", "/api/sessions"]) {
+      // Role-scoped sessions only:
+      // admin → all, teacher → assigned, student → enrolled courses
+      let sessionsUrl = "/api/sessions";
+      if (role === "admin") sessionsUrl = "/api/admin/sessions";
+      else if (role === "teacher") sessionsUrl = "/api/teacher/sessions";
+      else if (role === "student") sessionsUrl = "/api/student/students-sessions";
+
+      const res = await axiosInstance.get(sessionsUrl);
+      const list = extractList(res, ["sessions", "classes", "data"]);
+      // Do NOT merge localStorage — that leaked other users' classes
+      setSessions(mergeSessionLists(list));
+      persistScheduledClasses([]);
+
+      if (role === "admin") {
         try {
-          const res = await axiosInstance.get(url);
-          collectedSessions.push(...extractList(res, ["sessions", "classes", "data"]));
-        } catch {
-          // try next endpoint
+          const courseRes = await axiosInstance.get("/api/admin/courses");
+          setCourses(extractList(courseRes, ["courses", "data"]));
+        } catch (courseError) {
+          console.error("Failed to fetch calendar courses", courseError);
         }
-      }
 
-      const merged = mergeSessionLists(collectedSessions, loadScheduledClasses());
-      setSessions(merged);
-      persistScheduledClasses(merged);
-
-      try {
-        const courseRes = await axiosInstance.get("/api/admin/courses");
-        setCourses(extractList(courseRes, ["courses", "data"]));
-      } catch (courseError) {
-        console.error("Failed to fetch calendar courses", courseError);
-      }
-
-      try {
-        const teacherRes = await axiosInstance.get("/api/admin/teachers");
-        setTeachers(extractList(teacherRes, ["teachers", "data"]));
-      } catch (teacherError) {
-        console.error("Failed to fetch calendar instructors", teacherError);
+        try {
+          const teacherRes = await axiosInstance.get("/api/admin/teachers");
+          setTeachers(extractList(teacherRes, ["teachers", "data"]));
+        } catch (teacherError) {
+          console.error("Failed to fetch calendar instructors", teacherError);
+        }
+      } else if (role === "teacher") {
+        try {
+          const courseRes = await axiosInstance.get("/api/teacher/courses");
+          setCourses(extractList(courseRes, ["courses", "data"]));
+        } catch (courseError) {
+          console.error("Failed to fetch teacher courses", courseError);
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Failed to load calendar");
+      setSessions([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!role) return;
     loadCalendarData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
 
   // Filter Logic
   const filteredSessions = sessions.filter((s) => {
@@ -244,9 +254,8 @@ export default function ClassCalendar() {
         created._id = saved._id || saved.id;
       }
 
-      const next = mergeSessionLists([created], sessions);
-      setSessions(next);
-      persistScheduledClasses(next);
+      // Refresh from API so visibility stays server-authoritative
+      await loadCalendarData();
       setShowAddModal(false);
       setNewSession(emptySession);
     } catch (err) {
@@ -331,7 +340,7 @@ export default function ClassCalendar() {
             ))}
           </div>
 
-          {(role === "admin" || role === "teacher") && (
+          {role === "admin" && (
             <button
               onClick={() => setShowAddModal(true)}
               className="btn d-flex align-items-center gap-2 fw-bold"

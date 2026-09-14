@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
+import { useAuth } from "../../../context/AppContext";
 import { courseDisplayName, extractList, getTeacherName } from "../../../utils/lmsData";
 import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom";
 import LmsAsyncState from "../../common/LmsAsyncState";
 import LmsLoader from "../../common/LmsLoader";
 
 const SessionsList = ({ viewAll }) => {
+  const { role } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -16,12 +18,20 @@ const SessionsList = ({ viewAll }) => {
   const [saving, setSaving] = useState(false);
   const [joiningId, setJoiningId] = useState("");
   const navigate = useNavigate();
+  const canEditStatus = role === "admin";
+
+  const getSessionsUrl = () => {
+    if (role === "admin") return "/api/admin/sessions";
+    if (role === "teacher") return "/api/teacher/sessions";
+    if (role === "student") return "/api/student/students-sessions";
+    return "/api/sessions";
+  };
 
   const getSessions = async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await axiosInstance.get("/api/admin/sessions");
+      const res = await axiosInstance.get(getSessionsUrl());
       setSessions(extractList(res, ["sessions", "data"]));
     } catch (err) {
       console.error("Failed to fetch sessions", err);
@@ -32,8 +42,10 @@ const SessionsList = ({ viewAll }) => {
   };
 
   useEffect(() => {
+    if (!role) return;
     getSessions();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role]);
 
   const formatDate = (date) =>
     date
@@ -96,7 +108,13 @@ const SessionsList = ({ viewAll }) => {
       <div className="card-header d-flex justify-content-between align-items-center border-0 px-0">
         <div>
           <h5 className="fw-bold m-0">Sessions</h5>
-          <small className="text-muted">Schedule new classes from the Class Calendar</small>
+          <small className="text-muted">
+            {role === "teacher"
+              ? "Sessions assigned to you"
+              : role === "student"
+              ? "Sessions from your enrolled courses"
+              : "Schedule new classes from the Class Calendar"}
+          </small>
         </div>
       </div>
 
@@ -174,7 +192,7 @@ const SessionsList = ({ viewAll }) => {
                   )}
                 </button>
 
-                {!viewAll && (
+                {!viewAll && canEditStatus && (
                   <button
                     type="button"
                     className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"

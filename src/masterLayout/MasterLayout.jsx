@@ -161,8 +161,9 @@ const MasterLayout = ({ children }) => {
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `sidebar-link ${isActive ? "active bg-yellow" : ""}`
+                    `sidebar-link ${isActive ? "active" : ""}`
                   }
+                  title={item.name}
                 >
                   <Icon icon={item.icon} className="sidebar-icon" />
                   <span className="sidebar-text">{item.name}</span>

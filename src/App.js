@@ -23,9 +23,7 @@ import AdminProfile from "./pages/mypages/AdminProfile";
 import TeacherDashboard from "./pages/mypages/TeacherDashboard";
 import TeacherAssigment from "./pages/mypages/TeacherAssigment";
 import UploadAssignment from "./pages/mypages/UploadAssignment";
-import TeacherPaySLip from "./pages/mypages/TeacherPaySLip";
 import TeacherProfile from "./pages/mypages/TeacherProfile";
-import TransactionsPage from "./pages/mypages/TransactionsPage";
 import AllSessions from "./pages/mypages/AllSessions";
 import ClassCalendar from "./pages/mypages/ClassCalendar";
 import MonthlyProgress from "./pages/mypages/MonthlyProgress";
@@ -95,9 +93,7 @@ function App() {
                 <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
                 <Route path="/assignments" element={<TeacherAssigment />} />
                 <Route path="/upload-assignment" element={<UploadAssignment />} />
-                <Route path="/pay-slip" element={<TeacherPaySLip />} />
                 <Route path="/teacher-profile" element={<TeacherProfile />} />
-                <Route path="/transaction" element={<TransactionsPage />} />
                 <Route path="/edit-assignment/:id" element={<EditAssignment />} />
                 <Route path="/students-progress" element={<TeacherMonthlyProgress />} />
                 <Route path="/teacher-review" element={<TeacherReviews />} />
