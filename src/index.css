@@ -124,8 +124,14 @@
 }
 
 .lms-page {
-  padding: 4px 2px 24px;
+  padding: 8px 8px 28px;
   animation: lmsPageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (min-width: 768px) {
+  .lms-page {
+    padding: 10px 12px 32px;
+  }
 }
 
 .lms-page-title {
@@ -153,7 +159,8 @@
 }
 
 .lms-form-header {
-  padding-bottom: 4px;
+  padding: 4px 4px 12px;
+  margin-bottom: 1.25rem !important;
   animation: lmsFadeUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -248,7 +255,7 @@
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 14px 16px;
+  padding: 16px 18px;
 }
 
 .lms-info-tile small {

@@ -47,7 +47,20 @@
 }
 
 .dashboard-main-body {
+  padding: 1.25rem 1.25rem 2rem !important;
   animation: lmsPageIn 0.55s var(--lms-ease) both;
+}
+
+@media (min-width: 768px) {
+  .dashboard-main-body {
+    padding: 1.5rem 1.75rem 2.25rem !important;
+  }
+}
+
+@media (min-width: 1400px) {
+  .dashboard-main-body {
+    padding: 1.75rem 2rem 2.5rem !important;
+  }
 }
 
 .navbar-header {
@@ -57,6 +70,13 @@
   border-bottom: 1px solid var(--lms-border) !important;
   box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
   transition: background 0.3s ease, box-shadow 0.3s ease;
+  padding-inline: 0.75rem !important;
+}
+
+@media (min-width: 768px) {
+  .navbar-header {
+    padding-inline: 1rem !important;
+  }
 }
 
 [data-theme="dark"] .navbar-header {
@@ -193,11 +213,49 @@
   border-radius: var(--lms-radius) !important;
   box-shadow: var(--lms-shadow) !important;
   transition: transform 0.35s var(--lms-ease), box-shadow 0.35s var(--lms-ease), border-color 0.3s ease !important;
+  overflow: hidden;
 }
 
 .card:hover,
 .basic-data-table:hover {
   box-shadow: var(--lms-shadow-hover) !important;
+}
+
+.card .card-header,
+.basic-data-table .card-header {
+  padding: 1.1rem 1.35rem !important;
+}
+
+.card .card-body,
+.basic-data-table .card-body {
+  padding: 1.25rem 1.35rem !important;
+}
+
+.card .card-body.p-0,
+.basic-data-table .card-body.p-0 {
+  padding: 0 !important;
+}
+
+.card .card-body.p-0 .table-responsive,
+.basic-data-table .card-body.p-0 .table-responsive {
+  padding: 0.35rem 0.5rem 0.75rem;
+}
+
+.card .card-footer,
+.basic-data-table .card-footer {
+  padding: 1rem 1.35rem !important;
+}
+
+/* Tables: keep cells away from edges */
+.table.bordered-table th,
+.table.bordered-table td,
+.table th,
+.table td {
+  padding: 0.9rem 1rem !important;
+}
+
+.table-responsive {
+  padding-inline: 2px;
 }
 
 .lms-stat-card {
@@ -254,6 +312,8 @@
   border: 1px solid var(--lms-border) !important;
   border-radius: 16px !important;
   box-shadow: var(--lms-shadow) !important;
+  padding: 1.15rem 1.35rem !important;
+  margin-bottom: 1.5rem !important;
   animation: lmsFadeUp 0.45s var(--lms-ease) both;
   transition: box-shadow 0.3s ease, transform 0.3s var(--lms-ease);
 }
@@ -484,6 +544,56 @@
 
 .lms-pulse-gold {
   animation: lmsSoftPulse 2.2s ease-in-out infinite;
+}
+
+/* Extra breathing room for common flush wrappers */
+.dashboard-main-body > .row,
+.lms-page > .row {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.dashboard-main-body .card.p-20,
+.lms-page .card.p-20 {
+  padding: 1.35rem !important;
+}
+
+.dashboard-main-body .card.p-24,
+.lms-page .card.p-24 {
+  padding: 1.5rem !important;
+}
+
+.modal-body {
+  padding: 1.35rem 1.5rem !important;
+}
+
+.modal-header,
+.modal-footer {
+  padding: 1rem 1.5rem !important;
+}
+
+.auth .max-w-464-px {
+  padding: 2rem 1.75rem !important;
+}
+
+@media (max-width: 767.98px) {
+  .dashboard-main-body {
+    padding: 1rem 0.85rem 1.75rem !important;
+  }
+
+  .card .card-header,
+  .basic-data-table .card-header,
+  .card .card-body,
+  .basic-data-table .card-body {
+    padding: 1rem 1.05rem !important;
+  }
+
+  .table.bordered-table th,
+  .table.bordered-table td,
+  .table th,
+  .table td {
+    padding: 0.75rem 0.85rem !important;
+  }
 }
 
 /* Reduce motion for accessibility */
