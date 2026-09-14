@@ -11,10 +11,12 @@ import {
   getCourseId,
   getTeacherName,
 } from "../../utils/lmsData";
+import LmsLoader from "../../components/common/LmsLoader";
 
 const SessionCreate = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark"
   );
@@ -74,6 +76,7 @@ const SessionCreate = () => {
   useEffect(() => {
     const load = async () => {
       try {
+        setFetching(true);
         const [courseRes, teacherRes] = await Promise.all([
           axiosInstance.get("/api/admin/courses"),
           axiosInstance.get("/api/admin/teachers"),
@@ -82,6 +85,8 @@ const SessionCreate = () => {
         setTeachers(extractList(teacherRes, ["teachers", "data"]));
       } catch (error) {
         console.error("Failed to fetch session form data", error);
+      } finally {
+        setFetching(false);
       }
     };
     load();
@@ -134,8 +139,10 @@ const SessionCreate = () => {
           borderRadius: "16px",
           boxShadow: isDark ? "0 8px 24px rgba(0,0,0,0.28)" : "0 8px 24px rgba(15,23,42,0.05)",
           color: isDark ? "#E2E8F0" : "#111",
+          position: "relative",
         }}
       >
+        {fetching && <LmsLoader variant="overlay" label="Loading form data..." />}
         <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onSubmit}>
           {({ values, setFieldValue }) => (
             <Form style={rowStyle}>
@@ -198,8 +205,8 @@ const SessionCreate = () => {
                 >
                   Close
                 </button>
-                <button type="submit" className="lms-btn-primary" disabled={loading}>
-                  {loading ? "Creating..." : "Create Session"}
+                <button type="submit" className="lms-btn-primary" disabled={loading || fetching}>
+                  {loading ? <LmsLoader variant="button" label="Creating..." /> : "Create Session"}
                 </button>
               </div>
             </Form>

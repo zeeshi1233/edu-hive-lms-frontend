@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import LmsFilterBar from "../../components/common/LmsFilterBar";
+import LmsAsyncState from "../../components/common/LmsAsyncState";
 
 export default function FeeDetails() {
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark"
   );
@@ -25,44 +28,31 @@ export default function FeeDetails() {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        const response = await axiosInstance.get("/api/student/payments");
-        const payments = response.data.payments || [];
-        const history = payments.map((p) => ({
-          _id: p._id,
-          rawDate: p.createdAt,
-          date: new Date(p.createdAt).toLocaleDateString(),
-          amount: p.amount,
-          method: p.paymentMethod || "Online Transfer",
-          status: p.status === "success" || p.status === "Paid" ? "Paid" : "Pending",
-        }));
-        setPaymentHistory(history);
-      } catch (error) {
-        console.error("Error fetching payment history:", error);
-        // Fallback sample data for preview if endpoint empty
-        setPaymentHistory([
-          {
-            _id: "p1",
-            rawDate: new Date().toISOString(),
-            date: new Date().toLocaleDateString(),
-            amount: 45000,
-            method: "Online Banking",
-            status: "Paid",
-          },
-          {
-            _id: "p2",
-            rawDate: new Date(Date.now() - 86400000 * 30).toISOString(),
-            date: new Date(Date.now() - 86400000 * 30).toLocaleDateString(),
-            amount: 45000,
-            method: "Credit Card",
-            status: "Paid",
-          },
-        ]);
-      }
-    };
+  const fetchPayments = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await axiosInstance.get("/api/student/payments");
+      const payments = response.data.payments || [];
+      const history = payments.map((p) => ({
+        _id: p._id,
+        rawDate: p.createdAt,
+        date: new Date(p.createdAt).toLocaleDateString(),
+        amount: p.amount,
+        method: p.paymentMethod || "Online Transfer",
+        status: p.status === "success" || p.status === "Paid" ? "Paid" : "Pending",
+      }));
+      setPaymentHistory(history);
+    } catch (err) {
+      console.error("Error fetching payment history:", err);
+      setError(err.response?.data?.message || "Failed to load fee details");
+      setPaymentHistory([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchPayments();
   }, []);
 
@@ -146,6 +136,17 @@ export default function FeeDetails() {
           transition: "0.3s",
         }}
       >
+        <LmsAsyncState
+          loading={loading}
+          error={error}
+          empty={!loading && !error && filteredPayments.length === 0}
+          loadingLabel="Loading fee transactions..."
+          emptyTitle="No payments found"
+          emptyMessage="No fee transactions match the selected filters."
+          emptyIcon="solar:wallet-money-bold-duotone"
+          onRetry={fetchPayments}
+          minHeight={200}
+        >
         <div className="table-responsive">
           <table
             style={{ width: "100%", borderCollapse: "collapse", color: textColor }}
@@ -225,19 +226,10 @@ export default function FeeDetails() {
                   </td>
                 </tr>
               ))}
-              {filteredPayments.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    style={{ textAlign: "center", padding: "24px" }}
-                  >
-                    No payment history matches current filter criteria.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
+        </LmsAsyncState>
       </div>
     </div>
   );

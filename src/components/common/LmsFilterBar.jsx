@@ -59,6 +59,7 @@ export default function LmsFilterBar({
 
   return (
     <div
+      className="lms-filter-bar"
       style={{
         background: cardBg,
         border: `1px solid ${borderColor}`,

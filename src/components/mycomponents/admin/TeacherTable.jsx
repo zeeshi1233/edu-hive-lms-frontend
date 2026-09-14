@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import LmsFilterBar from "../../common/LmsFilterBar";
+import LmsLoader from "../../common/LmsLoader";
 
 const TeacherTable = () => {
   const [teachers, setTeachers] = useState([]);
@@ -240,7 +241,7 @@ const TeacherTable = () => {
 
         <div className="card-body table-responsive">
           {loading ? (
-            <p className="text-center">Loading teachers...</p>
+            <LmsLoader label="Loading teachers..." style={{ minHeight: 180 }} />
           ) : (
             <table
               className="table bordered-table mb-0"

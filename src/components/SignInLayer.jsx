@@ -80,17 +80,20 @@ const [showPassword, setShowPassword] = useState(false);
     <section className="auth bg-base d-flex justify-content-center flex-wrap">
       <div className="auth-right py-32 px-24 d-flex flex-column justify-content-center w-100">
         <div className="max-w-464-px mx-auto w-100 d-flex flex-column align-items-center">
-          <Link to="/" className="mb-40 d-flex justify-content-center">
+          <Link to="/" className="mb-32 d-flex justify-content-center lms-pulse-gold" style={{ borderRadius: 20 }}>
             <img
               src="assets/images/logo.png"
-              alt=""
-              style={{ maxWidth: "200px" }}
+              alt="EduHive"
+              style={{ maxWidth: "180px" }}
             />
           </Link>
 
-          <h4 className="mb-12 text-center">Sign In to your Account</h4>
-          <p className="mb-32 text-secondary-light text-lg text-center">
-            Welcome back! please enter your detail
+          <span className="lms-kicker mb-2">EduHive LMS</span>
+          <h4 className="mb-8 text-center fw-bold" style={{ letterSpacing: "-0.02em" }}>
+            Sign In to your Account
+          </h4>
+          <p className="mb-28 text-secondary-light text-lg text-center">
+            Welcome back — please enter your details
           </p>
 
           <form className="w-100" onSubmit={(e) => e.preventDefault()}>
@@ -120,7 +123,6 @@ const [showPassword, setShowPassword] = useState(false);
                 onChange={(e) => setPassword(e.target.value)}
               />
 
-              {/* Eye Icon */}
               <span
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
@@ -135,27 +137,26 @@ const [showPassword, setShowPassword] = useState(false);
               </span>
             </div>
 
-
             <select
               className="form-control bg-neutral-50 radius-12"
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
             >
-              <option value="">Select Role </option>
+              <option value="">Select Role</option>
               <option value="teacher">Teacher</option>
               <option value="student">Student</option>
             </select>
 
             {error && (
-              <p className="text-danger text-sm mb-4 text-center">{error}</p>
+              <p className="text-danger text-sm mb-4 mt-3 text-center">{error}</p>
             )}
 
             <button
               type="button"
               onClick={handleSignIn}
               disabled={loading}
-              className="btn text-sm btn-sm px-12 py-16 w-100 radius-12 mt-16"
-              style={{ backgroundColor: "#FEBA01", border: "none" }}
+              className="btn text-sm btn-sm px-12 py-16 w-100 radius-12 mt-16 fw-bold"
+              style={{ backgroundColor: "#FEBA01", border: "none", color: "#111" }}
             >
               {loading ? "Signing In..." : "Sign In"}
             </button>

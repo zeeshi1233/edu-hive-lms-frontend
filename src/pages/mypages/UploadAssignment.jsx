@@ -3,6 +3,7 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axiosInstance from "../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
+import LmsLoader from "../../components/common/LmsLoader";
 
 const UploadAssignment = () => {
   const navigate = useNavigate();
@@ -11,15 +12,19 @@ const UploadAssignment = () => {
   );
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchingCourses, setFetchingCourses] = useState(true);
 
   /* ================= FETCH COURSES ================= */
   useEffect(() => {
     const getAllCourses = async () => {
       try {
+        setFetchingCourses(true);
         const res = await axiosInstance.get("/api/teacher/courses");
         setCourses(res.data.courses || []);
       } catch (error) {
         console.error("Failed to fetch courses", error);
+      } finally {
+        setFetchingCourses(false);
       }
     };
     getAllCourses();
@@ -193,7 +198,7 @@ const UploadAssignment = () => {
             <div className="md:col-span-2 mt-3">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || fetchingCourses}
                 style={{
                   width: "100%",
                   padding: "12px",
@@ -204,7 +209,13 @@ const UploadAssignment = () => {
                   cursor: "pointer",
                 }}
               >
-                {loading ? "Uploading..." : "Upload Assignment"}
+                {loading ? (
+                  <LmsLoader variant="button" label="Uploading..." />
+                ) : fetchingCourses ? (
+                  <LmsLoader variant="button" label="Loading courses..." />
+                ) : (
+                  "Upload Assignment"
+                )}
               </button>
             </div>
           </Form>

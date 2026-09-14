@@ -2,93 +2,103 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom";
+import LmsAsyncState from "../../common/LmsAsyncState";
+import LmsLoader from "../../common/LmsLoader";
 
 const LectureSchedule = () => {
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [joiningId, setJoiningId] = useState("");
   const navigate = useNavigate();
 
   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
 
-  /* ================= FETCH SESSIONS FROM API ================= */
+  const fetchSessions = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axiosInstance.get("/api/student/students-sessions");
+      const sessions = res.data?.sessions || [];
+
+      const formatted = sessions.map((s) => ({
+        _id: s._id,
+        title: s.title,
+        subject: s.course?.title ?? "N/A",
+        code: s.course?._id?.slice(-5) ?? "----",
+        teacher: s.instructor?.name ?? "TBA",
+        time: `${new Date(s.startTime).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })} - ${new Date(s.endTime).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`,
+        status: s.status === "pending" ? "Upcoming" : s.status,
+        statusColor:
+          s.status === "pending"
+            ? "info"
+            : s.status === "completed"
+            ? "secondary"
+            : "success",
+        meetingLink: s.meetingLink,
+        initials: s.course?.title?.substring(0, 2).toUpperCase() || "CS",
+        initialsBg: "primary",
+      }));
+
+      setLectures(formatted);
+    } catch (err) {
+      console.error("Failed to fetch sessions:", err);
+      setError(err.response?.data?.message || "Failed to load lecture schedule");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const res = await axiosInstance.get("/api/student/students-sessions");
-        const sessions = res.data?.sessions || [];
-
-        const formatted = sessions.map((s) => ({
-          _id: s._id,
-          title: s.title,
-          subject: s.course?.title ?? "N/A",
-          code: s.course?._id?.slice(-5) ?? "----",
-          teacher: s.instructor?.name ?? "TBA",
-          time: `${new Date(s.startTime).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })} - ${new Date(s.endTime).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}`,
-          status: s.status === "pending" || s.status === "Scheduled" ? "Upcoming" : s.status,
-          statusColor:
-            s.status === "pending" || s.status === "Scheduled"
-              ? "info"
-              : s.status === "conducted" || s.status === "completed"
-              ? "secondary"
-              : s.isLive
-              ? "success"
-              : "success",
-          canJoin: s.canStudentJoin || s.isLive,
-          classroomPath: s.classroomPath,
-          roomName: s.roomName,
-          initials: s.course?.title?.substring(0, 2).toUpperCase() || "CS",
-          initialsBg: "primary",
-        }));
-
-        setLectures(formatted);
-      } catch (error) {
-        console.error("Failed to fetch sessions:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSessions();
   }, []);
-
-  if (loading) return <p style={{ color: isDark ? "#E2E8F0" : "#111" }}>Loading sessions...</p>;
 
   return (
     <div className="col-xxl-12 col-xl-12">
       <div className="card h-100">
         <div className="card-body p-24">
           <div className="d-flex flex-wrap align-items-center gap-1 justify-content-between mb-16">
-            <h5 className="fw-bold mb-0">Today’s Lecture Schedule</h5>
+            <h5 className="fw-bold mb-0" style={{ color: isDark ? "#E2E8F0" : undefined }}>
+              Today’s Lecture Schedule
+            </h5>
           </div>
 
-          <div className="table-responsive scroll-sm">
-            <table className="table bordered-table sm-table mb-0">
-              <thead>
-                <tr>
-                  <th scope="col">Subject</th>
-                  <th scope="col">Teacher</th>
-                  <th scope="col">Time</th>
-                  <th scope="col" className="text-center">Status</th>
-                  <th scope="col" className="text-center">Join</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {lectures.length === 0 ? (
+          <LmsAsyncState
+            loading={loading}
+            error={error}
+            empty={!loading && !error && lectures.length === 0}
+            loadingLabel="Loading today's lectures..."
+            emptyTitle="No sessions today"
+            emptyMessage="No sessions scheduled for today."
+            emptyIcon="solar:calendar-bold-duotone"
+            onRetry={fetchSessions}
+            minHeight={160}
+          >
+            <div className="table-responsive scroll-sm">
+              <table className="table bordered-table sm-table mb-0">
+                <thead>
                   <tr>
-                    <td colSpan="5" className="text-center py-4">
-                      No sessions scheduled for today.
-                    </td>
+                    <th scope="col">Subject</th>
+                    <th scope="col">Teacher</th>
+                    <th scope="col">Time</th>
+                    <th scope="col" className="text-center">
+                      Status
+                    </th>
+                    <th scope="col" className="text-center">
+                      Join
+                    </th>
                   </tr>
-                ) : (
-                  lectures.map((lec, i) => (
-                    <tr key={i}>
+                </thead>
+
+                <tbody>
+                  {lectures.map((lec, i) => (
+                    <tr key={lec._id || i}>
                       <td>
                         <div className="d-flex align-items-center">
                           <div
@@ -115,34 +125,38 @@ const LectureSchedule = () => {
                         </span>
                       </td>
                       <td className="text-center">
-                        {lec._id && lec.canJoin ? (
+                        {lec._id ? (
                           <button
                             type="button"
                             className="btn btn-sm"
                             style={{ background: "#FEBA01", color: "#000" }}
-                            onClick={() =>
+                            disabled={joiningId === lec._id}
+                            onClick={() => {
+                              setJoiningId(lec._id);
                               navigate(getClassroomPath(lec), {
                                 state: {
                                   roomName: getLiveKitRoomName(lec),
                                   classTitle: lec.title || lec.subject,
                                 },
-                              })
-                            }
+                              });
+                            }}
                           >
-                            Join Class
+                            {joiningId === lec._id ? (
+                              <LmsLoader variant="button" label="Joining..." />
+                            ) : (
+                              "Join Class"
+                            )}
                           </button>
-                        ) : lec._id ? (
-                          <span style={{ color: "#888" }}>Waiting for teacher</span>
                         ) : (
                           <span style={{ color: "#888" }}>N/A</span>
                         )}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </LmsAsyncState>
         </div>
       </div>
     </div>

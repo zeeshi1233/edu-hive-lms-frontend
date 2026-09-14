@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import LmsFilterBar from "../../common/LmsFilterBar";
+import LmsLoader from "../../common/LmsLoader";
 
 export default function MyCourses() {
   const [isDark, setIsDark] = useState(
@@ -73,7 +74,7 @@ export default function MyCourses() {
   ];
 
   if (loading) {
-    return <p style={{ color: cardText, padding: "20px" }}>Loading courses...</p>;
+    return <LmsLoader label="Loading courses..." variant="page" />;
   }
 
   return (

@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axiosInstance from "../../api/axiosInstance";
+import LmsLoader from "../../components/common/LmsLoader";
 
 const EditAssignment = () => {
   const { id } = useParams();
@@ -15,6 +16,7 @@ const EditAssignment = () => {
   const [courses, setCourses] = useState([]);
   const [assignment, setAssignment] = useState(state?.assignment || null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(!state?.assignment);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -34,10 +36,15 @@ const EditAssignment = () => {
 
 
 const getAssignmentById = async (assignmentId) => {
-  const res = await axiosInstance.get(
-    `/api/teacher/assignments/${assignmentId}`
-  );
-  setAssignment(res.data.assignment);
+  try {
+    setFetching(true);
+    const res = await axiosInstance.get(
+      `/api/teacher/assignments/${assignmentId}`
+    );
+    setAssignment(res.data.assignment);
+  } finally {
+    setFetching(false);
+  }
 };
 
   useEffect(() => {
@@ -50,7 +57,9 @@ const getAssignmentById = async (assignmentId) => {
 
 
 
-  if (!assignment) return <p className="text-center mt-5">Loading...</p>;
+  if (fetching || !assignment) {
+    return <LmsLoader label="Loading assignment..." variant="page" />;
+  }
 
   /* ================= FORM ================= */
   const initialValues = {
@@ -187,7 +196,7 @@ const getAssignmentById = async (assignmentId) => {
                 textAlign:'center'
               }}
             >
-              {loading ? "Updating..." : "Update Assignment"}
+              {loading ? <LmsLoader variant="button" label="Updating..." /> : "Update Assignment"}
             </button>
           </div>
 

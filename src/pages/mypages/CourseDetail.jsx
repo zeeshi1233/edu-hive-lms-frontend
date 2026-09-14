@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import axiosInstance from "../../api/axiosInstance";
+import LmsAsyncState from "../../components/common/LmsAsyncState";
 
 export default function CourseDetail() {
   const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark"
   );
 
-  /* ================= THEME OBSERVER ================= */
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
@@ -20,21 +22,25 @@ export default function CourseDetail() {
     return () => observer.disconnect();
   }, []);
 
-  /* ================= FETCH ASSIGNMENTS ================= */
+  const fetchAssignments = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axiosInstance.get("/api/student/assignments");
+      setAssignments(res.data?.assignments || []);
+    } catch (err) {
+      console.error("Failed to fetch assignments", err);
+      setError(err.response?.data?.message || "Failed to load assignments");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAssignments = async () => {
-      try {
-        const res = await axiosInstance.get("/api/student/assignments");
-        setAssignments(res.data?.assignments || []);
-      } catch (error) {
-        console.error("Failed to fetch assignments", error);
-      }
-    };
     fetchAssignments();
   }, []);
 
-  const formatDate = (date) =>
-    new Date(date).toLocaleDateString("en-GB");
+  const formatDate = (date) => new Date(date).toLocaleDateString("en-GB");
 
   const bg = isDark ? "#0F172A" : "#F7F7F7";
   const cardBg = isDark ? "#1E293B" : "#FFFFFF";
@@ -52,11 +58,21 @@ export default function CourseDetail() {
         transition: "0.3s",
       }}
     >
-      <h3 className="fw-bold mb-24" style={{ fontSize: '18px' }}>My Assignments</h3>
+      <h3 className="fw-bold mb-24" style={{ fontSize: "18px" }}>
+        My Assignments
+      </h3>
 
-      {assignments.length === 0 ? (
-        <p style={{ color: subTextColor }}>No assignments found</p>
-      ) : (
+      <LmsAsyncState
+        loading={loading}
+        error={error}
+        empty={!loading && !error && assignments.length === 0}
+        loadingLabel="Loading assignments..."
+        emptyTitle="No assignments found"
+        emptyMessage="You don’t have any assignments yet."
+        emptyIcon="solar:document-text-bold-duotone"
+        onRetry={fetchAssignments}
+        minHeight={200}
+      >
         <div className="accordion" id="assignmentAccordion">
           {assignments.map((a, i) => (
             <div
@@ -113,7 +129,6 @@ export default function CourseDetail() {
                           borderRadius: "6px",
                         }}
                       >
-                        
                         View Assignment
                       </a>
                     </p>
@@ -161,7 +176,7 @@ export default function CourseDetail() {
             </div>
           ))}
         </div>
-      )}
+      </LmsAsyncState>
     </div>
   );
 }

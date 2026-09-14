@@ -15,6 +15,8 @@ import {
   persistScheduledClasses,
 } from "../../utils/lmsData";
 import { getClassroomPath, getLiveKitRoomName, getSessionId } from "../../utils/livekitRoom";
+import LmsLoader from "../../components/common/LmsLoader";
+import LmsAsyncState from "../../components/common/LmsAsyncState";
 
 export default function ClassCalendar() {
   const { role, user } = useAuth();
@@ -22,6 +24,10 @@ export default function ClassCalendar() {
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark"
   );
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [joiningId, setJoiningId] = useState("");
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -71,10 +77,12 @@ export default function ClassCalendar() {
   const [newSession, setNewSession] = useState(emptySession);
   const [sessions, setSessions] = useState([]);
 
-  useEffect(() => {
-    const loadCalendarData = async () => {
-      const collectedSessions = [];
+  const loadCalendarData = async () => {
+    setLoading(true);
+    setError("");
+    const collectedSessions = [];
 
+    try {
       for (const url of ["/api/admin/sessions", "/api/sessions"]) {
         try {
           const res = await axiosInstance.get(url);
@@ -91,18 +99,24 @@ export default function ClassCalendar() {
       try {
         const courseRes = await axiosInstance.get("/api/admin/courses");
         setCourses(extractList(courseRes, ["courses", "data"]));
-      } catch (error) {
-        console.error("Failed to fetch calendar courses", error);
+      } catch (courseError) {
+        console.error("Failed to fetch calendar courses", courseError);
       }
 
       try {
         const teacherRes = await axiosInstance.get("/api/admin/teachers");
         setTeachers(extractList(teacherRes, ["teachers", "data"]));
-      } catch (error) {
-        console.error("Failed to fetch calendar instructors", error);
+      } catch (teacherError) {
+        console.error("Failed to fetch calendar instructors", teacherError);
       }
-    };
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Failed to load calendar");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadCalendarData();
   }, []);
 
@@ -186,6 +200,7 @@ export default function ClassCalendar() {
       alert("This class does not have a valid session id yet.");
       return;
     }
+    setJoiningId(id);
     navigate(getClassroomPath(session), {
       state: {
         roomName: getLiveKitRoomName(session),
@@ -196,6 +211,7 @@ export default function ClassCalendar() {
 
   const handleAddSession = async (e) => {
     e.preventDefault();
+    if (saving) return;
     if (!newSession.title || !newSession.courseId || !newSession.teacherId) {
       alert("Please select a course and instructor before scheduling.");
       return;
@@ -210,6 +226,7 @@ export default function ClassCalendar() {
       startTime,
     };
 
+    setSaving(true);
     try {
       const payload = {
         title: newSession.title,
@@ -226,15 +243,18 @@ export default function ClassCalendar() {
       if (saved && (saved._id || saved.id)) {
         created._id = saved._id || saved.id;
       }
-    } catch (error) {
-      console.error("Failed to persist scheduled class", error);
-    }
 
-    const next = mergeSessionLists([created], sessions);
-    setSessions(next);
-    persistScheduledClasses(next);
-    setShowAddModal(false);
-    setNewSession(emptySession);
+      const next = mergeSessionLists([created], sessions);
+      setSessions(next);
+      persistScheduledClasses(next);
+      setShowAddModal(false);
+      setNewSession(emptySession);
+    } catch (err) {
+      console.error("Failed to persist scheduled class", err);
+      alert(err.response?.data?.message || "Failed to schedule class. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Status Badge Colors
@@ -388,6 +408,7 @@ export default function ClassCalendar() {
       {/* Main Calendar Card */}
       <div
         style={{
+          position: "relative",
           background: cardBg,
           border: `1px solid ${borderColor}`,
           borderRadius: "20px",
@@ -395,8 +416,17 @@ export default function ClassCalendar() {
           boxShadow: isDark
             ? "0 4px 25px rgba(0, 0, 0, 0.45)"
             : "0 4px 20px rgba(0, 0, 0, 0.05)",
+          minHeight: 320,
         }}
       >
+        <LmsAsyncState
+          loading={loading}
+          error={error}
+          loadingLabel="Loading scheduled classes..."
+          onRetry={loadCalendarData}
+          loaderVariant="page"
+          minHeight={280}
+        >
         {/* Month Navigation */}
         <div className="d-flex align-items-center justify-content-between mb-4">
           <div className="d-flex align-items-center gap-3">
@@ -671,6 +701,7 @@ export default function ClassCalendar() {
                             </button>
                             <button
                               onClick={() => joinClass(sess)}
+                              disabled={joiningId === getSessionId(sess)}
                               className="btn btn-sm d-flex align-items-center gap-1"
                               style={{
                                 background: "#FEBA01",
@@ -679,7 +710,13 @@ export default function ClassCalendar() {
                                 fontWeight: "600",
                               }}
                             >
-                              <Icon icon="solar:videocamera-record-bold" width="16" /> Join Class
+                              {joiningId === getSessionId(sess) ? (
+                                <LmsLoader variant="button" label="Joining..." />
+                              ) : (
+                                <>
+                                  <Icon icon="solar:videocamera-record-bold" width="16" /> Join Class
+                                </>
+                              )}
                             </button>
                           </div>
                         </td>
@@ -691,6 +728,7 @@ export default function ClassCalendar() {
             </table>
           </div>
         )}
+        </LmsAsyncState>
       </div>
 
       {/* ================= SESSION DETAILS MODAL ================= */}
@@ -868,9 +906,16 @@ export default function ClassCalendar() {
                       type="button"
                       className="btn btn-dark fw-bold"
                       style={{ borderRadius: "8px" }}
+                      disabled={joiningId === getSessionId(selectedSession)}
                       onClick={() => joinClass(selectedSession)}
                     >
-                      Join Class <Icon icon="solar:videocamera-record-bold" />
+                      {joiningId === getSessionId(selectedSession) ? (
+                        <LmsLoader variant="button" label="Joining..." />
+                      ) : (
+                        <>
+                          Join Class <Icon icon="solar:videocamera-record-bold" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1133,15 +1178,21 @@ export default function ClassCalendar() {
                       type="button"
                       className="btn btn-secondary"
                       onClick={() => setShowAddModal(false)}
+                      disabled={saving}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       className="btn fw-bold"
+                      disabled={saving}
                       style={{ background: "#FEBA01", color: "#000", padding: "10px 18px" }}
                     >
-                      Save Class Schedule
+                      {saving ? (
+                        <LmsLoader variant="button" label="Saving..." />
+                      ) : (
+                        "Save Class Schedule"
+                      )}
                     </button>
                   </div>
                 </form>

@@ -64,7 +64,6 @@ const RevenueTable = () => {
   const modalBg = isDark ? "#1E293B" : "#fff";
   const headerBg = isDark ? "#111827" : "#f7f9fc";
   const textColor = isDark ? "#E2E8F0" : "#111";
-  const mutedText = isDark ? "#94A3B8" : "#6c757d";
   const borderColor = isDark ? "#374151" : "#dee2e6";
   const buttonBg = "#FEBA01";
 

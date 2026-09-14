@@ -8,6 +8,7 @@ import { boardOptions } from "../../constants/boardOptions";
 import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
 import { courseDisplayName, extractList, getCourseId } from "../../utils/lmsData";
+import LmsLoader from "../../components/common/LmsLoader";
 
 const AddTeacher = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const AddTeacher = () => {
   const [courses, setCourses] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetchingCourses, setFetchingCourses] = useState(true);
   const editTeacher = location.state;
   const isEdit = !!editTeacher;
 
@@ -35,10 +37,13 @@ const AddTeacher = () => {
 
   const getCourses = async () => {
     try {
+      setFetchingCourses(true);
       const res = await axiosInstance.get("/api/admin/courses");
       setCourses(extractList(res, ["courses", "data"]));
     } catch (error) {
       console.error("Failed to load courses", error);
+    } finally {
+      setFetchingCourses(false);
     }
   };
 
@@ -347,8 +352,16 @@ const AddTeacher = () => {
                 >
                   Close
                 </button>
-                <button type="submit" className="lms-btn-primary" disabled={loading}>
-                  {loading ? "Saving..." : isEdit ? "Update Teacher" : "Add Teacher"}
+                <button type="submit" className="lms-btn-primary" disabled={loading || fetchingCourses}>
+                  {loading ? (
+                    <LmsLoader variant="button" label="Saving..." />
+                  ) : fetchingCourses ? (
+                    <LmsLoader variant="button" label="Loading..." />
+                  ) : isEdit ? (
+                    "Update Teacher"
+                  ) : (
+                    "Add Teacher"
+                  )}
                 </button>
               </div>
             </Form>

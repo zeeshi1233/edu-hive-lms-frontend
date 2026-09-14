@@ -11,6 +11,7 @@ import {
   getCourseId,
   getCourseTitle,
 } from "../../utils/lmsData";
+import LmsLoader from "../../components/common/LmsLoader";
 
 const AdminCourseDetail = () => {
   const { id } = useParams();
@@ -90,7 +91,7 @@ const AdminCourseDetail = () => {
         }}
       >
         {loading ? (
-          <p className="mb-0">Loading course...</p>
+          <LmsLoader label="Loading course..." style={{ minHeight: 180 }} />
         ) : !course ? (
           <div className="text-center py-4">
             <p style={{ color: muted }}>This course link is invalid or the course was removed.</p>

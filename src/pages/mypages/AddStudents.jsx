@@ -7,6 +7,7 @@ import { Icon } from "@iconify/react";
 import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
 import { courseDisplayName, extractList, getCourseId } from "../../utils/lmsData";
+import LmsLoader from "../../components/common/LmsLoader";
 
 const AddStudent = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const AddStudent = () => {
     document.documentElement.getAttribute("data-theme") === "dark"
   );
   const [loading, setLoading] = useState(false);
+  const [fetchingCourses, setFetchingCourses] = useState(true);
   const [courses, setCourses] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -92,10 +94,13 @@ const AddStudent = () => {
 
   const getCourses = async () => {
     try {
+      setFetchingCourses(true);
       const res = await axiosInstance.get("/api/admin/courses");
       setCourses(extractList(res, ["courses", "data"]));
     } catch (error) {
       console.error("Failed to load courses", error);
+    } finally {
+      setFetchingCourses(false);
     }
   };
 
@@ -308,8 +313,14 @@ const AddStudent = () => {
                 >
                   Close
                 </button>
-                <button type="submit" className="lms-btn-primary" disabled={loading}>
-                  {loading ? "Adding..." : "Add Student"}
+                <button type="submit" className="lms-btn-primary" disabled={loading || fetchingCourses}>
+                  {loading ? (
+                    <LmsLoader variant="button" label="Adding..." />
+                  ) : fetchingCourses ? (
+                    <LmsLoader variant="button" label="Loading..." />
+                  ) : (
+                    "Add Student"
+                  )}
                 </button>
               </div>
             </Form>

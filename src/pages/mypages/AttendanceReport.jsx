@@ -3,6 +3,7 @@ import $ from "jquery";
 import "datatables.net-dt/js/dataTables.dataTables.js";
 import axiosInstance from "../../api/axiosInstance";
 import LmsFilterBar from "../../components/common/LmsFilterBar";
+import LmsLoader from "../../components/common/LmsLoader";
 
 export default function AttendanceReport() {
   const [isDark, setIsDark] = useState(
@@ -114,7 +115,7 @@ export default function AttendanceReport() {
   ];
 
   if (loading) {
-    return <p className="text-center mt-4">Loading attendance report...</p>;
+    return <LmsLoader label="Loading attendance report..." variant="page" />;
   }
 
   return (

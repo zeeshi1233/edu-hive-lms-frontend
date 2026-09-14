@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import axiosInstance from "../../../api/axiosInstance";
+import LmsLoader from "../../common/LmsLoader";
 
 const RevenueStates = () => {
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark"
   );
-  const [, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     pendingFees: 0,
     collectedToday: 0,
   });
 
-  // Observe theme changes
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
@@ -22,10 +22,12 @@ const RevenueStates = () => {
       attributeFilter: ["data-theme"],
     });
     return () => observer.disconnect();
-  }, []); 
- useEffect(() => {
+  }, []);
+
+  useEffect(() => {
     const fetchStats = async () => {
       try {
+        setLoading(true);
         const response = await axiosInstance.get("/api/admin/revenue");
         setStats({
           pendingFees: response.data.stats.pendingFees,
@@ -60,6 +62,14 @@ const RevenueStates = () => {
     : "rgba(255,255,255,0.65)";
   const pageBg = isDark ? "#0F172A" : "#F8F9FA";
   const textColor = isDark ? "#E2E8F0" : "#111";
+
+  if (loading) {
+    return (
+      <div style={{ background: pageBg, padding: "20px" }}>
+        <LmsLoader label="Loading revenue stats..." />
+      </div>
+    );
+  }
 
   return (
     <div

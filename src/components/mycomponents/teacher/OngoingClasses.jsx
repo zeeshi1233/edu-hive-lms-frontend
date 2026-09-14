@@ -5,22 +5,25 @@ import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom";
-
+import LmsAsyncState from "../../common/LmsAsyncState";
 
 const OngoingClasses = () => {
   const tableRef = useRef(null);
   const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [joiningId, setJoiningId] = useState("");
   const navigate = useNavigate();
 
-  /* ================= GET SESSIONS ================= */
   const getSessions = async () => {
     try {
       setLoading(true);
+      setError("");
       const res = await axiosInstance.get("/api/teacher/sessions");
       setSessions(res.data.sessions || []);
     } catch (err) {
       console.error(err);
+      setError(err.response?.data?.message || "Failed to load ongoing classes");
     } finally {
       setLoading(false);
     }
@@ -30,32 +33,23 @@ const OngoingClasses = () => {
     getSessions();
   }, []);
 
-  /* ================= FILTER ONGOING (TODAY + TIME) ================= */
-  
-// Filter today's sessions (local time)
-const ongoingSessions = sessions.filter((s) => {
-  const start = new Date(s.startTime); // UTC time from API
-  const today = new Date(); // local time
+  const ongoingSessions = sessions.filter((s) => {
+    const start = new Date(s.startTime);
+    const today = new Date();
+    return (
+      start.getFullYear() === today.getFullYear() &&
+      start.getMonth() === today.getMonth() &&
+      start.getDate() === today.getDate()
+    );
+  });
 
-  // convert start to local date components
-  return (
-    start.getFullYear() === today.getFullYear() &&
-    start.getMonth() === today.getMonth() &&
-    start.getDate() === today.getDate()
-  );
-});
-
-
-
-  /* ================= DATATABLE ================= */
   useEffect(() => {
-    if (ongoingSessions.length && tableRef.current) {
+    if (!loading && ongoingSessions.length && tableRef.current) {
       const table = $(tableRef.current).DataTable();
       return () => table.destroy();
     }
-  }, [ongoingSessions]);
+  }, [loading, ongoingSessions]);
 
-  /* ================= TIME FORMAT ================= */
   const formatTime = (date) =>
     new Date(date).toLocaleTimeString([], {
       hour: "2-digit",
@@ -69,45 +63,40 @@ const ongoingSessions = sessions.filter((s) => {
       </div>
 
       <div className="card-body">
-        <table className="table bordered-table mb-0" ref={tableRef}>
-          <thead>
-            <tr>
-              <th>S.L</th>
-              <th>Teacher</th>
-              <th>Subject</th>
-              <th>Class Time</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+        <LmsAsyncState
+          loading={loading}
+          error={error}
+          empty={!loading && !error && ongoingSessions.length === 0}
+          loadingLabel="Loading ongoing classes..."
+          emptyTitle="No ongoing classes"
+          emptyMessage="No ongoing classes right now."
+          emptyIcon="solar:videocamera-record-bold-duotone"
+          onRetry={getSessions}
+          minHeight={160}
+        >
+          <table className="table bordered-table mb-0" ref={tableRef}>
+            <thead>
+              <tr>
+                <th>S.L</th>
+                <th>Teacher</th>
+                <th>Subject</th>
+                <th>Class Time</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="6" className="text-center">
-                  Loading...
-                </td>
-              </tr>
-            ) : ongoingSessions.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="text-center text-muted">
-                  No ongoing classes right now
-                </td>
-              </tr>
-            ) : (
-              ongoingSessions.map((cls, i) => (
+            <tbody>
+              {ongoingSessions.map((cls, i) => (
                 <tr key={cls._id}>
                   <td>{i + 1}</td>
                   <td>{cls.instructor?.name}</td>
                   <td>{cls.course?.title || "—"}</td>
                   <td>
-                    {formatTime(cls.startTime)} -{" "}
-                    {formatTime(cls.endTime)}
+                    {formatTime(cls.startTime)} - {formatTime(cls.endTime)}
                   </td>
                   <td>
-                    <span className="badge bg-success px-3 py-2">
-                      Live
-                    </span>
+                    <span className="badge bg-success px-3 py-2">Live</span>
                   </td>
                   <td>
                     <button
@@ -118,23 +107,29 @@ const ongoingSessions = sessions.filter((s) => {
                         borderRadius: "8px",
                         background: "#FEBA01",
                       }}
-                      onClick={() =>
+                      disabled={joiningId === cls._id}
+                      onClick={() => {
+                        setJoiningId(cls._id);
                         navigate(getClassroomPath(cls), {
                           state: {
                             roomName: getLiveKitRoomName(cls),
                             classTitle: cls.course?.title || cls.title || "Live Class",
                           },
-                        })
-                      }
+                        });
+                      }}
                     >
-                      <Icon icon="mdi:video" width={22} />
+                      {joiningId === cls._id ? (
+                        <span className="lms-spinner lms-spinner-sm" />
+                      ) : (
+                        <Icon icon="mdi:video" width={22} />
+                      )}
                     </button>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </LmsAsyncState>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import {
   getCourseCode,
   getCourseTitle,
 } from "../../utils/lmsData";
+import LmsLoader from "../../components/common/LmsLoader";
 
 const AddCourse = () => {
   const navigate = useNavigate();
@@ -223,13 +224,16 @@ const AddCourse = () => {
                     Close
                   </button>
                   <button type="submit" className="lms-btn-primary" disabled={loading}>
-                    {loading
-                      ? isEdit
-                        ? "Updating..."
-                        : "Saving..."
-                      : isEdit
-                      ? "Update Course"
-                      : "Save Course"}
+                    {loading ? (
+                      <LmsLoader
+                        variant="button"
+                        label={isEdit ? "Updating..." : "Saving..."}
+                      />
+                    ) : isEdit ? (
+                      "Update Course"
+                    ) : (
+                      "Save Course"
+                    )}
                   </button>
                 </div>
               </Form>

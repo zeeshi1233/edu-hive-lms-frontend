@@ -13,6 +13,7 @@ import {
   getCourseTitle,
   generateCourseCode,
 } from "../../../utils/lmsData";
+import LmsLoader from "../../common/LmsLoader";
 
 const CourseTable = () => {
   const [courses, setCourses] = useState([]);
@@ -257,7 +258,7 @@ const CourseTable = () => {
 
         <div className="card-body p-0">
           {loading ? (
-            <p className="text-center py-4">Loading courses...</p>
+            <LmsLoader label="Loading courses..." style={{ minHeight: 180 }} />
           ) : filteredCourses.length === 0 ? (
             <p className="text-center py-4 text-muted">No courses found.</p>
           ) : (

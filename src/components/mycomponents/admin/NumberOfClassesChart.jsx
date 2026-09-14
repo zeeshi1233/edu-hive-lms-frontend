@@ -6,6 +6,7 @@ import {
   loadScheduledClasses,
   mergeSessionLists,
 } from "../../../utils/lmsData";
+import LmsLoader from "../../common/LmsLoader";
 
 const MONTHS = [
   "Jan",
@@ -149,7 +150,7 @@ const NumberOfClassesChart = () => {
 
   return (
     <div
-      className="card border-0 h-100"
+      className="card border-0 h-100 lms-stat-card"
       style={{
         background: cardBg,
         border: `1px solid ${borderColor}`,
@@ -187,9 +188,7 @@ const NumberOfClassesChart = () => {
       </div>
       <div className="card-body pt-0 px-24 pb-24">
         {loading ? (
-          <p className="text-center py-5 mb-0" style={{ color: isDark ? "#94A3B8" : "#64748B" }}>
-            Loading class schedule...
-          </p>
+          <LmsLoader label="Loading class schedule..." style={{ minHeight: 220 }} />
         ) : (
           <ReactApexChart
             options={options}

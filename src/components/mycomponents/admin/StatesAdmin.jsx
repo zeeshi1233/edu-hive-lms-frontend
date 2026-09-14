@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import { extractList, loadScheduledClasses, mergeSessionLists } from "../../../utils/lmsData";
+import LmsLoader from "../../common/LmsLoader";
 
 const StatesAdmin = () => {
   const navigate = useNavigate();
@@ -108,11 +109,7 @@ const StatesAdmin = () => {
   const borderColor = isDark ? "#334155" : "#E2E8F0";
 
   if (loading) {
-    return (
-      <div className="text-center py-4" style={{ color: isDark ? "#E2E8F0" : "#64748B" }}>
-        Loading admin metrics...
-      </div>
-    );
+    return <LmsLoader label="Loading admin metrics..." variant="inline" style={{ minHeight: 154 }} />;
   }
 
   return (
@@ -154,17 +151,15 @@ const StatesAdmin = () => {
               </div>
 
               <div
+                className="lms-stat-icon"
                 style={{
                   width: "52px",
                   height: "52px",
                   minWidth: "52px",
                   borderRadius: "16px",
-                  background: "rgba(254, 186, 1, 0.16)",
-                  border: "1px solid rgba(254, 186, 1, 0.28)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#FEBA01",
                 }}
               >
                 <Icon icon={card.icon} width="28" />

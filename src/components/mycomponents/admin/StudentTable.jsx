@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { Link } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import LmsFilterBar from "../../common/LmsFilterBar";
+import LmsLoader from "../../common/LmsLoader";
 
 const StudentTable = () => {
   const [students, setStudents] = useState([]);
@@ -140,7 +141,7 @@ const StudentTable = () => {
 
         <div className="card-body">
           {loading ? (
-            <p className="text-center">Loading Students...</p>
+            <LmsLoader label="Loading students..." style={{ minHeight: 180 }} />
           ) : (
             <table className="table bordered-table mb-0" id="dataTable">
               <thead>

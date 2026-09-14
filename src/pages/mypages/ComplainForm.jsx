@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axiosInstance from "../../api/axiosInstance";
+import LmsLoader from "../../components/common/LmsLoader";
 
 export default function ComplainForm() {
   const [form, setForm] = useState({
@@ -126,7 +127,7 @@ export default function ComplainForm() {
             }}
             disabled={loading}
           >
-            {loading ? "Submitting..." : "Submit Complaint"}
+            {loading ? <LmsLoader variant="button" label="Submitting..." /> : "Submit Complaint"}
           </button>
         </div>
       </form>

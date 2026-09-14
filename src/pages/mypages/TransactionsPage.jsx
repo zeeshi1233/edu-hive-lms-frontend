@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../../api/axiosInstance";
-
+import LmsAsyncState from "../../components/common/LmsAsyncState";
 
 export default function TransactionsPage() {
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark"
   );
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   /* ================= THEME LISTENER ================= */
   useEffect(() => {
@@ -25,12 +26,14 @@ export default function TransactionsPage() {
   const getTransactions = async () => {
     try {
       setLoading(true);
+      setError("");
       const res = await axiosInstance.get(
         "/api/teacher/session-transactions"
       );
       setTransactions(res.data.transactions || []);
-    } catch (error) {
-      console.error("Failed to load transactions", error);
+    } catch (err) {
+      console.error("Failed to load transactions", err);
+      setError(err.response?.data?.message || "Failed to load transactions");
     } finally {
       setLoading(false);
     }
@@ -97,47 +100,25 @@ export default function TransactionsPage() {
     <div style={containerStyle}>
       <span style={titleStyle}>Transactions</span>
 
-     {!loading && transactions.length === 0 && (
-  <div
-    className="d-flex flex-column align-items-center justify-content-center"
-    style={{
-      marginTop: "80px",
-      color: isDark ? "#94A3B8" : "#64748B",
-    }}
-  >
-    <div
-      style={{
-        width: 80,
-        height: 80,
-        borderRadius: "50%",
-        background: isDark ? "#1E293B" : "#F8FAFC",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: "16px",
-      }}
-    >
-      <span style={{ fontSize: "32px" }}>💳</span>
-    </div>
-
-    <h6 className="fw-semibold mb-1">No transactions found</h6>
-    <p style={{ fontSize: "13px" }}>
-      You don’t have any transaction history yet.
-    </p>
-  </div>
-)}
-
-      {!loading &&
-        transactions.map((item) => (
+      <LmsAsyncState
+        loading={loading}
+        error={error}
+        empty={!loading && !error && transactions.length === 0}
+        loadingLabel="Loading transactions..."
+        emptyTitle="No transactions found"
+        emptyMessage="You don’t have any transaction history yet."
+        emptyIcon="solar:card-bold-duotone"
+        onRetry={getTransactions}
+        minHeight={220}
+      >
+        {transactions.map((item) => (
           <div key={item._id} style={cardStyle}>
-            {/* Date */}
             <div style={{ width: "120px" }}>
               <p className="fw-bold mb-0" style={{ fontSize: "13px" }}>
                 {formatDate(item.createdAt)}
               </p>
             </div>
 
-            {/* Profile */}
             <div style={{ display: "flex", alignItems: "center", width: "180px" }}>
               <div
                 style={{
@@ -146,7 +127,7 @@ export default function TransactionsPage() {
                   borderRadius: "50%",
                   background: isDark ? "#334155" : "#6B7280",
                 }}
-              ></div>
+              />
               <div style={{ marginLeft: "8px" }}>
                 <p className="mb-0 fw-bold" style={{ fontSize: "13px" }}>
                   {item.user?.name}
@@ -157,54 +138,42 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            {/* Info */}
             <div style={{ width: "120px", fontSize: "13px" }}>
               <span className="fw-bold">INFO: </span>
               {item.paymentMethod}
             </div>
 
-            {/* Subject */}
             <div style={{ width: "150px", fontSize: "13px" }}>
               <span className="fw-bold">Subject: </span>
               {item.course?.title || "—"}
             </div>
 
-            {/* Status */}
             <div style={{ width: "120px" }}>
-              <span style={badgeStyle(item.status)}>
-                {item.status}
-              </span>
+              <span style={badgeStyle(item.status)}>{item.status}</span>
             </div>
 
-            {/* Transaction Type */}
             <div style={{ width: "120px" }}>
-              <span style={badgeStyle("completed")}>
-                {item.type}
-              </span>
+              <span style={badgeStyle("completed")}>{item.type}</span>
             </div>
 
-            {/* Session Date */}
             <div style={{ width: "150px", fontSize: "13px" }}>
               <span className="fw-bold">Time:</span>
               <br />
               {formatTime(item.createdAt)}
             </div>
 
-            {/* Amount */}
             <div style={{ width: "100px", fontSize: "13px" }}>
               <span className="fw-bold">Amount:</span>
               <br />
               {item.amount}
             </div>
 
-            {/* Remaining */}
             <div style={{ width: "100px", fontSize: "13px" }}>
               <span className="fw-bold">Remaining:</span>
               <br />
               {item.course?.price || 0}
             </div>
 
-            {/* Delete */}
             <button
               className="btn btn-outline-dark btn-sm"
               style={{
@@ -216,6 +185,7 @@ export default function TransactionsPage() {
             </button>
           </div>
         ))}
+      </LmsAsyncState>
     </div>
   );
 }

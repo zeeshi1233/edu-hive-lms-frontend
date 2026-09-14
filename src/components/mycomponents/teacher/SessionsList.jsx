@@ -4,22 +4,28 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import { courseDisplayName, extractList, getTeacherName } from "../../../utils/lmsData";
 import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom";
+import LmsAsyncState from "../../common/LmsAsyncState";
+import LmsLoader from "../../common/LmsLoader";
 
 const SessionsList = ({ viewAll }) => {
   const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [editingSession, setEditingSession] = useState(null);
   const [statusValue, setStatusValue] = useState("conducted");
   const [saving, setSaving] = useState(false);
+  const [joiningId, setJoiningId] = useState("");
   const navigate = useNavigate();
 
   const getSessions = async () => {
     try {
       setLoading(true);
+      setError("");
       const res = await axiosInstance.get("/api/admin/sessions");
       setSessions(extractList(res, ["sessions", "data"]));
-    } catch (error) {
-      console.error("Failed to fetch sessions", error);
+    } catch (err) {
+      console.error("Failed to fetch sessions", err);
+      setError(err.response?.data?.message || "Failed to load sessions");
     } finally {
       setLoading(false);
     }
@@ -95,80 +101,94 @@ const SessionsList = ({ viewAll }) => {
       </div>
 
       <div className="mt-3">
-        {loading && <p className="text-center">Loading...</p>}
-
-        {!loading && sessions.length === 0 && (
-          <p className="text-center text-muted">No sessions found</p>
-        )}
-
-        {visibleSessions.map((s) => {
-          const label = statusLabel(s);
-          return (
-            <div
-              key={s._id}
-              className="d-flex align-items-center mb-3 p-3 rounded-3"
-              style={{ background: "rgba(148, 163, 184, 0.08)" }}
-            >
+        <LmsAsyncState
+          loading={loading}
+          error={error}
+          empty={!loading && !error && sessions.length === 0}
+          loadingLabel="Loading sessions..."
+          emptyTitle="No sessions found"
+          emptyMessage="Schedule new classes from the Class Calendar."
+          emptyIcon="solar:calendar-bold-duotone"
+          onRetry={getSessions}
+          minHeight={140}
+        >
+          {visibleSessions.map((s) => {
+            const label = statusLabel(s);
+            return (
               <div
-                className="rounded-circle d-flex align-items-center justify-content-center bg-light me-3"
-                style={{ width: 50, height: 50 }}
+                key={s._id}
+                className="d-flex align-items-center mb-3 p-3 rounded-3"
+                style={{ background: "rgba(148, 163, 184, 0.08)" }}
               >
-                <Icon icon="mdi:account" width={28} />
-              </div>
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center bg-light me-3"
+                  style={{ width: 50, height: 50 }}
+                >
+                  <Icon icon="mdi:account" width={28} />
+                </div>
 
-              <div className="flex-grow-1">
-                <h6 className="mb-0 fw-bold">
-                  {getTeacherName(s.instructor) || getTeacherName(s.teacher) || "Unknown Instructor"}
-                </h6>
-                <small className="text-muted">
-                  {courseDisplayName(s.course) || s.title || "No Course"} · {formatTime(s.startTime)}{" "}
-                  {s.startTime ? `· ${formatDate(s.startTime)}` : ""}
-                </small>
-              </div>
+                <div className="flex-grow-1">
+                  <h6 className="mb-0 fw-bold">
+                    {getTeacherName(s.instructor) || getTeacherName(s.teacher) || "Unknown Instructor"}
+                  </h6>
+                  <small className="text-muted">
+                    {courseDisplayName(s.course) || s.title || "No Course"} · {formatTime(s.startTime)}{" "}
+                    {s.startTime ? `· ${formatDate(s.startTime)}` : ""}
+                  </small>
+                </div>
 
-              <span
-                className={`badge me-2 ${
-                  label === "Conducted"
-                    ? "bg-success"
-                    : label === "Not Conducted"
-                    ? "bg-danger"
-                    : "bg-warning text-dark"
-                }`}
-              >
-                {label}
-              </span>
+                <span
+                  className={`badge me-2 ${
+                    label === "Conducted"
+                      ? "bg-success"
+                      : label === "Not Conducted"
+                      ? "bg-danger"
+                      : "bg-warning text-dark"
+                  }`}
+                >
+                  {label}
+                </span>
 
-              <button
-                type="button"
-                className="btn btn-sm d-flex align-items-center gap-1 fw-semibold me-2"
-                style={{ background: "#FEBA01", color: "#000", borderRadius: "8px" }}
-                onClick={() =>
-                  navigate(getClassroomPath(s), {
-                    state: {
-                      roomName: getLiveKitRoomName(s),
-                      classTitle: s.title || courseDisplayName(s.course),
-                    },
-                  })
-                }
-              >
-                <Icon icon="solar:videocamera-record-bold" width="16" />
-                Join Class
-              </button>
-
-              {!viewAll && (
                 <button
                   type="button"
-                  className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
+                  className="btn btn-sm d-flex align-items-center gap-1 fw-semibold me-2"
                   style={{ background: "#FEBA01", color: "#000", borderRadius: "8px" }}
-                  onClick={() => openEdit(s)}
+                  disabled={joiningId === s._id}
+                  onClick={() => {
+                    setJoiningId(s._id);
+                    navigate(getClassroomPath(s), {
+                      state: {
+                        roomName: getLiveKitRoomName(s),
+                        classTitle: s.title || courseDisplayName(s.course),
+                      },
+                    });
+                  }}
                 >
-                  <Icon icon="solar:pen-bold" width="16" />
-                  Edit
+                  {joiningId === s._id ? (
+                    <LmsLoader variant="button" label="Joining..." />
+                  ) : (
+                    <>
+                      <Icon icon="solar:videocamera-record-bold" width="16" />
+                      Join Class
+                    </>
+                  )}
                 </button>
-              )}
-            </div>
-          );
-        })}
+
+                {!viewAll && (
+                  <button
+                    type="button"
+                    className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
+                    style={{ background: "#FEBA01", color: "#000", borderRadius: "8px" }}
+                    onClick={() => openEdit(s)}
+                  >
+                    <Icon icon="solar:pen-bold" width="16" />
+                    Edit
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </LmsAsyncState>
       </div>
 
       {editingSession && (
@@ -224,7 +244,7 @@ const SessionsList = ({ viewAll }) => {
                     Close
                   </button>
                   <button className="lms-btn-primary" onClick={saveStatus} disabled={saving}>
-                    {saving ? "Saving..." : "Save Status"}
+                    {saving ? <LmsLoader variant="button" label="Saving..." /> : "Save Status"}
                   </button>
                 </div>
               </div>

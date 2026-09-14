@@ -5,11 +5,9 @@ import {
   NavLink,
   Outlet,
   useLocation,
-  useNavigate,
 } from "react-router-dom";
 import ThemeToggleButton from "../helper/ThemeToggleButton";
 import { sidebarMenu } from "../sideBarData/sidebarMenu";
-import { getCookie } from "../utils/cookies";
 import { useAuth } from "../context/AppContext";
 import axiosInstance from "../api/axiosInstance";
 
@@ -17,7 +15,6 @@ const MasterLayout = ({ children }) => {
   let [sidebarActive, seSidebarActive] = useState(false);
   let [mobileMenu, setMobileMenu] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, role, logout, logoutLoading } = useAuth();
   const [meUser, setMeUser] = useState(null);
 
@@ -164,7 +161,7 @@ const MasterLayout = ({ children }) => {
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `sidebar-link ${isActive ? "bg-yellow text-white" : ""}`
+                    `sidebar-link ${isActive ? "active bg-yellow" : ""}`
                   }
                 >
                   <Icon icon={item.icon} className="sidebar-icon" />
@@ -289,8 +286,8 @@ const MasterLayout = ({ children }) => {
         </div>
 
 
-        <div className="dashboard-main-body">
-          <Outlet /> {/* Yaha pages render honge */}
+        <div className="dashboard-main-body lms-page">
+          <Outlet />
         </div>
 
 

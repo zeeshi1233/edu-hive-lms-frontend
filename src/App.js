@@ -4,6 +4,7 @@ import MasterLayout from "./masterLayout/MasterLayout";
 import RouteScrollToTop from "./helper/RouteScrollToTop";
 import HomePageOne from "./pages/HomePageOne";
 import "./index.css";
+import "./lms-panel.css";
 import CourseDetail from "./pages/mypages/CourseDetail";
 import CompletedCourses from "./pages/mypages/CompletedCourses";
 import AttendanceReport from "./pages/mypages/AttendanceReport";
@@ -37,6 +38,9 @@ import SessionCreate from "./pages/mypages/SessionCreate";
 import EditAssignment from "./pages/mypages/EditAssignment";
 import AdminCourseDetail from "./pages/mypages/AdminCourseDetail";
 import ClassRoomPage from "./pages/mypages/ClassRoomPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
+import NotFoundRedirect from "./components/NotFoundRedirect";
 
 function App() {
   return (
@@ -44,56 +48,75 @@ function App() {
       <AuthProvider>
         <RouteScrollToTop />
         <Routes>
-          <Route path="/" element={<SignInPage />} />
-          <Route element={<MasterLayout />}>
-            {/* Student Routes Start */}
+          <Route
+            path="/"
+            element={
+              <PublicRoute>
+                <SignInPage />
+              </PublicRoute>
+            }
+          />
 
-            <Route path="/student-dashboard" element={<HomePageOne />} />
-            <Route path="/monthly-progress" element={<MonthlyProgress />} />
-            <Route path="/courses" element={<MyCourses />} />
-            <Route path="/assigments" element={<CourseDetail />} />
-            <Route path="/completed-course" element={<CompletedCourses />} />
+          {/* All app pages require login */}
+          <Route element={<ProtectedRoute />}>
+            <Route element={<MasterLayout />}>
+              {/* Student */}
+              <Route element={<ProtectedRoute allowedRoles={["student"]} />}>
+                <Route path="/student-dashboard" element={<HomePageOne />} />
+                <Route path="/monthly-progress" element={<MonthlyProgress />} />
+                <Route path="/courses" element={<MyCourses />} />
+                <Route path="/assigments" element={<CourseDetail />} />
+                <Route path="/completed-course" element={<CompletedCourses />} />
+                <Route path="/attendance" element={<AttendanceReport />} />
+                <Route path="/complain-form" element={<ComplainForm />} />
+                <Route path="/fee-section" element={<FeeDetails />} />
+                <Route path="/view-profile" element={<StudentProfile />} />
+              </Route>
 
-            <Route path="/attendance" element={<AttendanceReport />} />
-            <Route path="/complain-form" element={<ComplainForm />} />
-            <Route path="/fee-section" element={<FeeDetails />} />
-            <Route path="/view-profile" element={<StudentProfile />} />
-            {/* Student Routes End */}
+              {/* Admin */}
+              <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+                <Route path="/admin-dashboard" element={<AdminDashboard />} />
+                <Route path="/all-teacher" element={<AdminTeacher />} />
+                <Route path="/add-teacher" element={<AddTeacher />} />
+                <Route path="/all-students" element={<AdminStudents />} />
+                <Route path="/add-student" element={<AddStudent />} />
+                <Route path="/all-courses" element={<AdminCourse />} />
+                <Route path="/add-course" element={<AddCourse />} />
+                <Route path="/course/:id" element={<AdminCourseDetail />} />
+                <Route path="/admin-reviews" element={<AdminReviews />} />
+                <Route path="/edit-course/:id" element={<AddCourse />} />
+                <Route path="/revenue" element={<RevenueStudentsFees />} />
+                <Route path="/admin-profile" element={<AdminProfile />} />
+                <Route path="/create-session" element={<SessionCreate />} />
+              </Route>
 
-            {/* Admin Routes Start */}
+              {/* Teacher */}
+              <Route element={<ProtectedRoute allowedRoles={["teacher"]} />}>
+                <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+                <Route path="/assignments" element={<TeacherAssigment />} />
+                <Route path="/upload-assignment" element={<UploadAssignment />} />
+                <Route path="/pay-slip" element={<TeacherPaySLip />} />
+                <Route path="/teacher-profile" element={<TeacherProfile />} />
+                <Route path="/transaction" element={<TransactionsPage />} />
+                <Route path="/edit-assignment/:id" element={<EditAssignment />} />
+                <Route path="/students-progress" element={<TeacherMonthlyProgress />} />
+                <Route path="/teacher-review" element={<TeacherReviews />} />
+              </Route>
 
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/all-teacher" element={<AdminTeacher />} />
-            <Route path="/add-teacher" element={<AddTeacher />} />
-            <Route path="/all-students" element={<AdminStudents />} />
-            <Route path="/add-student" element={<AddStudent />} />
-            <Route path="/all-courses" element={<AdminCourse />} />
-            <Route path="/add-course" element={<AddCourse />} />
-            <Route path="/course/:id" element={<AdminCourseDetail />} />
-            <Route path="/admin-reviews" element={<AdminReviews />} />
-            <Route path="/edit-course/:id" element={<AddCourse />} />
-            <Route path="/revenue" element={<RevenueStudentsFees />} />
-            <Route path="/admin-profile" element={<AdminProfile />} />
-          
-            {/* Admin Routes End */}
-            <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
-            <Route path="/assignments" element={<TeacherAssigment />} />
-            <Route path="/upload-assignment" element={<UploadAssignment />} />
-            <Route path="/pay-slip" element={<TeacherPaySLip />} />
-            <Route path="/teacher-profile" element={<TeacherProfile />} />
-            <Route path="/transaction" element={<TransactionsPage />} />
-            <Route path="/all-session" element={<AllSessions />} />
-            <Route path="/class-calendar" element={<ClassCalendar />} />
-            <Route path="/classroom/:sessionId" element={<ClassRoomPage />} />
-            <Route path="/create-session" element={<SessionCreate />} />
-            <Route path="/edit-assignment/:id" element={<EditAssignment />} />
-            <Route
-              path="/students-progress"
-              element={<TeacherMonthlyProgress />}
-            />
-            <Route path="/teacher-review" element={<TeacherReviews />} />
-            {/* Teacher Routes End */}
+              {/* Shared authenticated pages */}
+              <Route
+                element={
+                  <ProtectedRoute allowedRoles={["admin", "teacher", "student"]} />
+                }
+              >
+                <Route path="/all-session" element={<AllSessions />} />
+                <Route path="/class-calendar" element={<ClassCalendar />} />
+                <Route path="/classroom/:sessionId" element={<ClassRoomPage />} />
+              </Route>
+            </Route>
           </Route>
+
+          <Route path="*" element={<NotFoundRedirect />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
