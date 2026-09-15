@@ -115,6 +115,13 @@ export default function ClassCalendar() {
         } catch (courseError) {
           console.error("Failed to fetch teacher courses", courseError);
         }
+      } else if (role === "student") {
+        try {
+          const courseRes = await axiosInstance.get("/api/student/courses");
+          setCourses(extractList(courseRes, ["courses", "data"]));
+        } catch (courseError) {
+          console.error("Failed to fetch student courses", courseError);
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || "Failed to load calendar");
@@ -127,23 +134,55 @@ export default function ClassCalendar() {
   useEffect(() => {
     if (!role) return;
     loadCalendarData();
+
+    const onFocus = () => loadCalendarData();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadCalendarData();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
+
+  const matchesStatusFilter = (session, filter) => {
+    if (!filter) return true;
+    const raw = String(session.status || "").toLowerCase();
+    const isLive = Boolean(session.isLive) || raw === "live" || raw === "ongoing";
+    const isConducted = raw === "conducted" || raw === "completed";
+    const isNotConducted = raw === "not conducted" || raw === "not_conducted";
+    const isCancelled = raw === "cancelled";
+    const isScheduled =
+      raw === "scheduled" || raw === "pending" || (!isLive && !isConducted && !isNotConducted && !isCancelled);
+
+    switch (filter) {
+      case "Live":
+        return isLive || (isScheduled && new Date(session.startTime || session.date) >= new Date());
+      case "Scheduled":
+        return isScheduled || isLive;
+      case "Completed":
+        return isConducted || isNotConducted;
+      case "Cancelled":
+        return isCancelled;
+      default:
+        return raw === String(filter).toLowerCase();
+    }
+  };
 
   // Filter Logic
   const filteredSessions = sessions.filter((s) => {
     if (startDate && new Date(s.date) < new Date(startDate)) return false;
     if (endDate && new Date(s.date) > new Date(endDate)) return false;
-    if (
-      selectedCourse &&
-      !s.course?.toLowerCase().includes(selectedCourse.toLowerCase())
-    )
-      return false;
-    if (
-      selectedStatus &&
-      s.status?.toLowerCase() !== selectedStatus.toLowerCase()
-    )
-      return false;
+    if (selectedCourse) {
+      const courseMatch =
+        s.course?.toLowerCase().includes(selectedCourse.toLowerCase()) ||
+        String(s.courseId || "") === String(selectedCourse);
+      if (!courseMatch) return false;
+    }
+    if (!matchesStatusFilter(s, selectedStatus)) return false;
     if (selectedType && s.type?.toLowerCase() !== selectedType.toLowerCase())
       return false;
     if (searchQuery) {
@@ -166,15 +205,18 @@ export default function ClassCalendar() {
     label: getTeacherName(teacher),
   }));
 
-  // Unique list of courses for filter dropdown
+  // Unique list of courses for filter dropdown (prefer API courses, then session labels)
   const courseOptions = Array.from(
-    new Set(
+    new Map(
       [
-        ...courseSelectOptions.map((option) => option.label),
-        ...sessions.map((s) => s.course),
-      ].filter(Boolean)
-    )
-  );
+        ...courseSelectOptions.map((option) => [option.label, option.label]),
+        ...sessions
+          .map((s) => s.course)
+          .filter(Boolean)
+          .map((label) => [label, label]),
+      ]
+    ).values()
+  ).filter((label) => label && label !== "Untitled Course" && label !== "Course");
 
   const statusOptions = [
     { label: "Live / Upcoming", value: "Live" },
@@ -270,11 +312,17 @@ export default function ClassCalendar() {
   const getStatusBadge = (status) => {
     switch (status?.toLowerCase()) {
       case "live":
+      case "ongoing":
         return { bg: "#DCFCE7", text: "#15803D", label: "LIVE NOW" };
       case "scheduled":
+      case "pending":
         return { bg: "#DBEAFE", text: "#1D4ED8", label: "Scheduled" };
       case "completed":
-        return { bg: "#F1F5F9", text: "#475569", label: "Completed" };
+      case "conducted":
+        return { bg: "#F1F5F9", text: "#475569", label: "Conducted" };
+      case "not conducted":
+      case "not_conducted":
+        return { bg: "#FEF3C7", text: "#B45309", label: "Not Conducted" };
       case "cancelled":
         return { bg: "#FEE2E2", text: "#B91C1C", label: "Cancelled" };
       default:

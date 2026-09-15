@@ -16,6 +16,7 @@ const StudentTable = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedGender, setSelectedGender] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   /* ================= FETCH STUDENTS ================= */
@@ -45,6 +46,11 @@ const StudentTable = () => {
     if (selectedCourse) {
       const courseTitles = s.enrolledCourses?.map((c) => (c.course?.title || c.title || "").toLowerCase()) || [];
       if (!courseTitles.some((t) => t.includes(selectedCourse.toLowerCase()))) {
+        return false;
+      }
+    }
+    if (selectedGender) {
+      if (String(s.gender || "").toLowerCase() !== selectedGender.toLowerCase()) {
         return false;
       }
     }
@@ -122,6 +128,32 @@ const StudentTable = () => {
         hideStatus
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        onReset={() => setSelectedGender("")}
+        extraFilters={
+          <div className="col-lg-2 col-md-6 col-12">
+            <label
+              style={{
+                fontSize: "12px",
+                fontWeight: "600",
+                marginBottom: "6px",
+                display: "block",
+              }}
+            >
+              Gender
+            </label>
+            <select
+              value={selectedGender}
+              onChange={(e) => setSelectedGender(e.target.value)}
+              className="form-select"
+              style={{ borderRadius: "10px", fontSize: "13px" }}
+            >
+              <option value="">All Genders</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        }
         actions={
           <Link
             to="/add-student"

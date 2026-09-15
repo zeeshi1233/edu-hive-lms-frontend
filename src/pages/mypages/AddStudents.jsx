@@ -125,10 +125,20 @@ const AddStudent = () => {
         }
         return;
       }
+      if (key === "gender" && values.gender) {
+        formData.append("gender", String(values.gender).toLowerCase());
+        return;
+      }
       if (values[key] !== undefined && values[key] !== null && values[key] !== "") {
         formData.append(key, values[key]);
       }
     });
+
+    // Backend Student model still requires these legacy fee fields
+    formData.append("feePlan", "monthly");
+    formData.append("totalFees", "0");
+    if (!values.address) formData.append("address", "N/A");
+    if (!values.dateOfBirth) formData.append("dateOfBirth", "2000-01-01");
 
     formData.append("role", "student");
     setLoading(true);
@@ -155,7 +165,13 @@ const AddStudent = () => {
       setPreview(null);
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Something went wrong!");
+      const validationMsg = error.response?.data?.errors?.[0]?.msg;
+      alert(
+        error.response?.data?.message ||
+          validationMsg ||
+          error.response?.data?.error ||
+          "Registration failed"
+      );
     } finally {
       setLoading(false);
     }

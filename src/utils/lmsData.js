@@ -54,12 +54,34 @@ export function getCourseCode(course) {
 }
 
 export function courseDisplayName(course) {
+  if (!course) return "";
+  if (typeof course === "string") {
+    // Avoid showing raw ObjectIds as course titles
+    if (/^[a-f\d]{24}$/i.test(course.trim())) return "";
+    return course;
+  }
   const title = getCourseTitle(course);
   const board = getCourseBoard(course);
   if (title && board && !title.toLowerCase().includes(String(board).toLowerCase())) {
     return `${title} for ${board}`;
   }
-  return title || getCourseCode(course) || "Untitled Course";
+  return title || getCourseCode(course) || "";
+}
+
+export function resolveSessionCourseLabel(session) {
+  if (!session) return "Course";
+  const courseObj =
+    session.course && typeof session.course === "object" ? session.course : null;
+  return (
+    courseDisplayName(courseObj) ||
+    session.courseTitle ||
+    (typeof session.course === "string" && !/^[a-f\d]{24}$/i.test(session.course)
+      ? session.course
+      : "") ||
+    session.courseCode ||
+    session.title ||
+    "Course"
+  );
 }
 
 export function generateCourseCode(title, board) {
@@ -144,19 +166,28 @@ export function normalizeCalendarSession(session) {
   const rawStatus = String(session.status || "Scheduled").toLowerCase();
   let status = session.status || "Scheduled";
   if (rawStatus === "conducted" || rawStatus === "completed") status = "Conducted";
-  if (rawStatus === "not_conducted" || rawStatus === "not conducted") {
+  else if (rawStatus === "not_conducted" || rawStatus === "not conducted") {
     status = "Not Conducted";
-  }
+  } else if (rawStatus === "ongoing") status = "Live";
+  else if (rawStatus === "cancelled") status = "Cancelled";
+  else if (rawStatus === "pending" || rawStatus === "scheduled") status = "Scheduled";
+
+  if (session.isLive) status = "Live";
+
+  const courseLabel =
+    courseDisplayName(courseObj) ||
+    session.courseTitle ||
+    (typeof session.course === "string" && !/^[a-f\d]{24}$/i.test(session.course)
+      ? session.course
+      : "") ||
+    session.courseCode ||
+    "";
 
   return {
     ...session,
     _id: session._id || session.id,
     title: session.title || session.topic || "Class",
-    course:
-      courseDisplayName(courseObj) ||
-      (typeof session.course === "string" ? session.course : "") ||
-      session.courseCode ||
-      "",
+    course: courseLabel || session.title || "Course",
     courseId: session.courseId || courseObj?._id || courseObj?.id || "",
     instructor:
       getTeacherName(teacherObj) ||
@@ -169,6 +200,8 @@ export function normalizeCalendarSession(session) {
     duration: session.duration || "60 mins",
     type,
     status,
+    notConductedReason: session.notConductedReason || "",
+    isLive: Boolean(session.isLive),
     meetingLink: session.meetingLink || session.meetLink || "",
     description: session.description || session.topic || "",
     attendees: session.attendees || 0,

@@ -107,6 +107,7 @@ const AddTeacher = () => {
 
   const onSubmit = async (values) => {
     const formData = new FormData();
+    // specialization removed from UI — backend fills default from qualification
     const skipKeys = [
       "specialization",
       "availability",
@@ -127,10 +128,14 @@ const AddTeacher = () => {
 
       if (key === "password" && !values.password) return;
 
+      if (key === "gender" && values.gender) {
+        formData.append("gender", String(values.gender).toLowerCase());
+        return;
+      }
+
       if (Array.isArray(values[key])) {
         values[key].forEach((item) => {
           formData.append(key, item);
-          formData.append(`${key}[]`, item);
         });
         return;
       }
@@ -153,8 +158,10 @@ const AddTeacher = () => {
       navigate("/all-teacher");
     } catch (err) {
       console.error(err);
+      const validationMsg = err.response?.data?.errors?.[0]?.msg;
       alert(
         err.response?.data?.message ||
+          validationMsg ||
           err.response?.data?.error ||
           "Failed to save teacher. Please check the form and try again."
       );

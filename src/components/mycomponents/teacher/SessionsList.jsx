@@ -8,6 +8,12 @@ import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom
 import LmsAsyncState from "../../common/LmsAsyncState";
 import LmsLoader from "../../common/LmsLoader";
 
+const NOT_CONDUCTED_REASONS = [
+  "Teacher Not Present",
+  "Student Not Present",
+  "Others",
+];
+
 const SessionsList = ({ viewAll }) => {
   const { role } = useAuth();
   const [sessions, setSessions] = useState([]);
@@ -15,6 +21,8 @@ const SessionsList = ({ viewAll }) => {
   const [error, setError] = useState("");
   const [editingSession, setEditingSession] = useState(null);
   const [statusValue, setStatusValue] = useState("conducted");
+  const [typeValue, setTypeValue] = useState("Regular Class");
+  const [reasonValue, setReasonValue] = useState("Others");
   const [saving, setSaving] = useState(false);
   const [joiningId, setJoiningId] = useState("");
   const navigate = useNavigate();
@@ -67,13 +75,29 @@ const SessionsList = ({ viewAll }) => {
   const openEdit = (session) => {
     const current = String(session.status || "").toLowerCase();
     setStatusValue(current.includes("not") ? "not_conducted" : "conducted");
+    setTypeValue(
+      String(session.type || "").toLowerCase().includes("extra")
+        ? "Extra Class"
+        : "Regular Class"
+    );
+    setReasonValue(session.notConductedReason || "Others");
     setEditingSession(session);
   };
 
   const saveStatus = async () => {
     if (!editingSession) return;
+    if (statusValue === "not_conducted" && !reasonValue) {
+      alert("Please select a reason for Not Conducted");
+      return;
+    }
+
     setSaving(true);
-    const payload = { status: statusValue };
+    const payload = {
+      status: statusValue,
+      type: typeValue,
+      notConductedReason: statusValue === "not_conducted" ? reasonValue : "",
+    };
+
     try {
       try {
         await axiosInstance.put(`/api/admin/sessions/${editingSession._id}`, payload);
@@ -82,7 +106,15 @@ const SessionsList = ({ viewAll }) => {
       }
       setSessions((prev) =>
         prev.map((item) =>
-          item._id === editingSession._id ? { ...item, status: statusValue } : item
+          item._id === editingSession._id
+            ? {
+                ...item,
+                status: statusValue,
+                type: typeValue,
+                notConductedReason:
+                  statusValue === "not_conducted" ? reasonValue : "",
+              }
+            : item
         )
       );
       setEditingSession(null);
@@ -99,6 +131,8 @@ const SessionsList = ({ viewAll }) => {
     const raw = String(session.status || "").toLowerCase();
     if (raw === "conducted" || raw === "completed") return "Conducted";
     if (raw === "not_conducted" || raw === "not conducted") return "Not Conducted";
+    if (raw === "ongoing") return "Live";
+    if (raw === "cancelled") return "Cancelled";
     if (session.endTime && new Date(session.endTime) < new Date()) return "Conducted";
     return "Upcoming";
   };
@@ -132,6 +166,7 @@ const SessionsList = ({ viewAll }) => {
         >
           {visibleSessions.map((s) => {
             const label = statusLabel(s);
+            const courseLabel = courseDisplayName(s.course) || s.courseTitle || s.title || "Course";
             return (
               <div
                 key={s._id}
@@ -150,7 +185,7 @@ const SessionsList = ({ viewAll }) => {
                     {getTeacherName(s.instructor) || getTeacherName(s.teacher) || "Unknown Instructor"}
                   </h6>
                   <small className="text-muted">
-                    {courseDisplayName(s.course) || s.title || "No Course"} · {formatTime(s.startTime)}{" "}
+                    {courseLabel} · {s.type || "Regular Class"} · {formatTime(s.startTime)}{" "}
                     {s.startTime ? `· ${formatDate(s.startTime)}` : ""}
                   </small>
                 </div>
@@ -161,6 +196,8 @@ const SessionsList = ({ viewAll }) => {
                       ? "bg-success"
                       : label === "Not Conducted"
                       ? "bg-danger"
+                      : label === "Live"
+                      ? "bg-success"
                       : "bg-warning text-dark"
                   }`}
                 >
@@ -177,7 +214,7 @@ const SessionsList = ({ viewAll }) => {
                     navigate(getClassroomPath(s), {
                       state: {
                         roomName: getLiveKitRoomName(s),
-                        classTitle: s.title || courseDisplayName(s.course),
+                        classTitle: s.title || courseLabel,
                       },
                     });
                   }}
@@ -228,9 +265,37 @@ const SessionsList = ({ viewAll }) => {
                   <button className="btn-close" onClick={() => setEditingSession(null)} />
                 </div>
                 <div className="modal-body">
-                  <p className="text-muted">
-                    {editingSession.title || courseDisplayName(editingSession.course)}
+                  <p className="text-muted mb-3">
+                    {editingSession.title ||
+                      courseDisplayName(editingSession.course) ||
+                      "Session"}
                   </p>
+
+                  <label className="fw-semibold mb-2 d-block">Class Type</label>
+                  <div className="d-flex flex-column gap-2 mb-3">
+                    {["Regular Class", "Extra Class"].map((option) => (
+                      <label
+                        key={option}
+                        className="d-flex align-items-center gap-2 p-3 rounded-3"
+                        style={{
+                          border: `1px solid ${
+                            typeValue === option ? "#FEBA01" : "#E2E8F0"
+                          }`,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="session-type"
+                          checked={typeValue === option}
+                          onChange={() => setTypeValue(option)}
+                        />
+                        <strong>{option}</strong>
+                      </label>
+                    ))}
+                  </div>
+
+                  <label className="fw-semibold mb-2 d-block">Status</label>
                   <div className="d-flex flex-column gap-2">
                     {[
                       { value: "conducted", label: "Conducted" },
@@ -256,6 +321,26 @@ const SessionsList = ({ viewAll }) => {
                       </label>
                     ))}
                   </div>
+
+                  {statusValue === "not_conducted" && (
+                    <div className="mt-3">
+                      <label className="fw-semibold mb-2 d-block">
+                        Reason (Not Conducted)
+                      </label>
+                      <select
+                        className="form-select"
+                        value={reasonValue}
+                        onChange={(e) => setReasonValue(e.target.value)}
+                        style={{ borderRadius: 10 }}
+                      >
+                        {NOT_CONDUCTED_REASONS.map((reason) => (
+                          <option key={reason} value={reason}>
+                            {reason}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <div className="modal-footer">
                   <button className="lms-btn-ghost" onClick={() => setEditingSession(null)}>

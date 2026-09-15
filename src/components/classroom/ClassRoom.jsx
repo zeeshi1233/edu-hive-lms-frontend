@@ -5,6 +5,21 @@ import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 
+const isMediaPermissionError = (err) => {
+  const msg = String(err?.message || err || "").toLowerCase();
+  const name = String(err?.name || "").toLowerCase();
+  return (
+    name === "notallowederror" ||
+    name === "notfounderror" ||
+    name === "notreadableerror" ||
+    msg.includes("permission") ||
+    msg.includes("notallowed") ||
+    msg.includes("could not start video") ||
+    msg.includes("could not start audio") ||
+    msg.includes("device")
+  );
+};
+
 const ClassRoom = ({
   roomName,
   userName,
@@ -15,10 +30,12 @@ const ClassRoom = ({
 }) => {
   const navigate = useNavigate();
   const leavingRef = useRef(false);
+  const connectedOnceRef = useRef(false);
   const [token, setToken] = useState("");
   const [serverUrl, setServerUrl] = useState("");
   const [status, setStatus] = useState("connecting");
   const [error, setError] = useState("");
+  const [mediaWarning, setMediaWarning] = useState("");
   const [checkInTime, setCheckInTime] = useState(null);
 
   const role = (roleProp || localStorage.getItem("role") || "").toLowerCase();
@@ -62,7 +79,10 @@ const ClassRoom = ({
     if (!silent) {
       setStatus("connecting");
       setError("");
+      setMediaWarning("");
       setToken("");
+      connectedOnceRef.current = false;
+      leavingRef.current = false;
     }
 
     try {
@@ -179,11 +199,16 @@ const ClassRoom = ({
           <button type="button" className="lms-btn-ghost" onClick={() => navigate(leavePath())}>
             Back to Dashboard
           </button>
-          {!isTeacher && (
-            <button type="button" className="lms-btn-primary" onClick={() => fetchToken()}>
-              Rejoin Class
-            </button>
-          )}
+          <button
+            type="button"
+            className="lms-btn-primary"
+            onClick={() => {
+              leavingRef.current = false;
+              fetchToken();
+            }}
+          >
+            Rejoin Class
+          </button>
         </div>
       </div>
     );
@@ -209,21 +234,57 @@ const ClassRoom = ({
         </button>
       </div>
 
+      {mediaWarning && (
+        <div
+          className="px-3 py-2 d-flex align-items-center gap-2"
+          style={{ background: "rgba(254,186,1,0.12)", color: "#FDE68A", fontSize: 13 }}
+        >
+          <Icon icon="solar:danger-triangle-bold" width="18" />
+          {mediaWarning}
+        </div>
+      )}
+
       <LiveKitRoom
+        key={token}
         token={token}
         serverUrl={serverUrl}
         connect
-        video
-        audio
+        // Don't force camera/mic on connect — permission denials were aborting the room
+        video={false}
+        audio={false}
         data-lk-theme="default"
         style={{ height: "calc(100vh - 210px)" }}
-        onConnected={() => setStatus("connected")}
+        onConnected={() => {
+          connectedOnceRef.current = true;
+          setStatus("connected");
+          setError("");
+        }}
         onDisconnected={() => {
-          if (!leavingRef.current) setStatus("disconnected");
+          if (leavingRef.current) return;
+          // Ignore premature disconnects before a successful connect (e.g. media abort)
+          if (!connectedOnceRef.current) return;
+          setStatus("disconnected");
         }}
         onError={(err) => {
+          if (isMediaPermissionError(err)) {
+            setMediaWarning(
+              "Camera/microphone permission denied. Join continues without media — allow access in the browser, then turn camera/mic on from the toolbar."
+            );
+            return;
+          }
+          // Don't tear down a live room for transient errors
+          if (connectedOnceRef.current) {
+            setMediaWarning(err?.message || "A classroom error occurred");
+            return;
+          }
           setStatus("error");
           setError(err?.message || "Classroom connection failed");
+        }}
+        onMediaDeviceFailure={(err) => {
+          setMediaWarning(
+            err?.message ||
+              "Could not start camera/microphone. You remain in class — enable devices from the control bar when ready."
+          );
         }}
       >
         <VideoConference />

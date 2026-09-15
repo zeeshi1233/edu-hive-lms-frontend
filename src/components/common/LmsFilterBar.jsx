@@ -70,6 +70,9 @@ export default function LmsFilterBar({
           ? "0 4px 20px rgba(0, 0, 0, 0.4)"
           : "0 4px 20px rgba(0, 0, 0, 0.04)",
         transition: "all 0.3s ease",
+        overflow: "visible",
+        position: "relative",
+        zIndex: 5,
       }}
     >
       {/* Top Header Row */}
@@ -279,10 +282,16 @@ export default function LmsFilterBar({
                   : `All ${courseLabel}`}
               </option>
               {courses.map((c, i) => {
-                const val = typeof c === "string" ? c : c._id || c.title;
-                const label = typeof c === "string" ? c : c.title || c.name;
+                const val =
+                  typeof c === "string"
+                    ? c
+                    : c._id || c.id || c.title || c.name || "";
+                const label =
+                  typeof c === "string"
+                    ? c
+                    : c.title || c.name || c.label || c.code || "Course";
                 return (
-                  <option key={i} value={val}>
+                  <option key={`${val}-${i}`} value={val}>
                     {label}
                   </option>
                 );
