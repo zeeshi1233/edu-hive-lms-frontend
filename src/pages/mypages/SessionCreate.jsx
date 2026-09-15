@@ -6,10 +6,9 @@ import { useNavigate } from "react-router-dom";
 import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
 import {
-  courseDisplayName,
   extractList,
-  getCourseId,
   getTeacherName,
+  toCourseSelectOptions,
 } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
 
@@ -92,10 +91,7 @@ const SessionCreate = () => {
     load();
   }, []);
 
-  const courseOptions = courses.map((course) => ({
-    value: getCourseId(course),
-    label: courseDisplayName(course),
-  }));
+  const courseOptions = toCourseSelectOptions(courses);
   const teacherOptions = teachers.map((teacher) => ({
     value: teacher._id || teacher.id,
     label: getTeacherName(teacher),

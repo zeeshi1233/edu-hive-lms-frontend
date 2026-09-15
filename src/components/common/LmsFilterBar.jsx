@@ -281,21 +281,30 @@ export default function LmsFilterBar({
                   ? "All Courses"
                   : `All ${courseLabel}`}
               </option>
-              {courses.map((c, i) => {
-                const val =
-                  typeof c === "string"
-                    ? c
-                    : c._id || c.id || c.title || c.name || "";
-                const label =
-                  typeof c === "string"
-                    ? c
-                    : c.title || c.name || c.label || c.code || "Course";
-                return (
+              {courses
+                .map((c, i) => {
+                  const val =
+                    typeof c === "string"
+                      ? c
+                      : c._id || c.id || c.title || c.name || "";
+                  const label =
+                    typeof c === "string"
+                      ? c
+                      : c.title || c.name || c.label || c.code || "";
+                  return { val, label, i };
+                })
+                .filter(
+                  ({ val, label }) =>
+                    val &&
+                    label &&
+                    !/^untitled(\s+course)?$/i.test(String(label).trim()) &&
+                    label !== "Course"
+                )
+                .map(({ val, label, i }) => (
                   <option key={`${val}-${i}`} value={val}>
                     {label}
                   </option>
-                );
-              })}
+                ))}
             </select>
           </div>
         )}

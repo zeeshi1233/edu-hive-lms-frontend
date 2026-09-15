@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
-import { courseDisplayName, extractList, getCourseId } from "../../utils/lmsData";
+import { extractList, toCourseSelectOptions } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
 
 const AddStudent = () => {
@@ -108,10 +108,7 @@ const AddStudent = () => {
     getCourses();
   }, []);
 
-  const courseOptions = courses.map((course) => ({
-    value: getCourseId(course),
-    label: courseDisplayName(course),
-  }));
+  const courseOptions = toCourseSelectOptions(courses);
 
   const onSubmit = async (values, { resetForm }) => {
     const formData = new FormData();

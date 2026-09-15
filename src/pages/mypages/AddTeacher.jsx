@@ -7,7 +7,7 @@ import { Icon } from "@iconify/react";
 import { boardOptions } from "../../constants/boardOptions";
 import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
-import { courseDisplayName, extractList, getCourseId } from "../../utils/lmsData";
+import { extractList, toCourseSelectOptions } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
 
 const AddTeacher = () => {
@@ -170,10 +170,7 @@ const AddTeacher = () => {
     }
   };
 
-  const courseOptions = courses.map((course) => ({
-    value: getCourseId(course),
-    label: courseDisplayName(course),
-  }));
+  const courseOptions = toCourseSelectOptions(courses);
 
   return (
     <div className="lms-page">

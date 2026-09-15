@@ -58,14 +58,41 @@ export function courseDisplayName(course) {
   if (typeof course === "string") {
     // Avoid showing raw ObjectIds as course titles
     if (/^[a-f\d]{24}$/i.test(course.trim())) return "";
-    return course;
+    const trimmed = course.trim();
+    if (!trimmed || /^untitled(\s+course)?$/i.test(trimmed)) return "";
+    return trimmed;
   }
   const title = getCourseTitle(course);
+  if (title && /^untitled(\s+course)?$/i.test(String(title).trim())) {
+    return getCourseCode(course) || "";
+  }
   const board = getCourseBoard(course);
   if (title && board && !title.toLowerCase().includes(String(board).toLowerCase())) {
     return `${title} for ${board}`;
   }
   return title || getCourseCode(course) || "";
+}
+
+/** True when a course has a real selectable label (not blank / Untitled). */
+export function hasValidCourseLabel(courseOrLabel) {
+  const label =
+    typeof courseOrLabel === "string"
+      ? courseOrLabel.trim()
+      : courseDisplayName(courseOrLabel);
+  if (!label) return false;
+  if (/^untitled(\s+course)?$/i.test(label)) return false;
+  if (label === "Course") return false;
+  return true;
+}
+
+export function toCourseSelectOptions(courses = []) {
+  return (courses || [])
+    .map((course) => ({
+      value: getCourseId(course),
+      label: courseDisplayName(course),
+      course,
+    }))
+    .filter((option) => option.value && hasValidCourseLabel(option.label));
 }
 
 export function resolveSessionCourseLabel(session) {
@@ -75,7 +102,9 @@ export function resolveSessionCourseLabel(session) {
   return (
     courseDisplayName(courseObj) ||
     session.courseTitle ||
-    (typeof session.course === "string" && !/^[a-f\d]{24}$/i.test(session.course)
+    (typeof session.course === "string" &&
+    hasValidCourseLabel(session.course) &&
+    !/^[a-f\d]{24}$/i.test(session.course)
       ? session.course
       : "") ||
     session.courseCode ||
@@ -174,7 +203,7 @@ export function normalizeCalendarSession(session) {
 
   if (session.isLive) status = "Live";
 
-  const courseLabel =
+  const rawCourseLabel =
     courseDisplayName(courseObj) ||
     session.courseTitle ||
     (typeof session.course === "string" && !/^[a-f\d]{24}$/i.test(session.course)
@@ -182,12 +211,13 @@ export function normalizeCalendarSession(session) {
       : "") ||
     session.courseCode ||
     "";
+  const courseLabel = hasValidCourseLabel(rawCourseLabel) ? rawCourseLabel : "";
 
   return {
     ...session,
     _id: session._id || session.id,
     title: session.title || session.topic || "Class",
-    course: courseLabel || session.title || "Course",
+    course: courseLabel || (hasValidCourseLabel(session.title) ? session.title : "") || "",
     courseId: session.courseId || courseObj?._id || courseObj?.id || "",
     instructor:
       getTeacherName(teacherObj) ||

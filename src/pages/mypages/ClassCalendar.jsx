@@ -6,12 +6,12 @@ import axiosInstance from "../../api/axiosInstance";
 import LmsFilterBar from "../../components/common/LmsFilterBar";
 import SearchableSelect from "../../components/common/SearchableSelect";
 import {
-  courseDisplayName,
   extractList,
-  getCourseId,
   getTeacherName,
+  hasValidCourseLabel,
   mergeSessionLists,
   persistScheduledClasses,
+  toCourseSelectOptions,
 } from "../../utils/lmsData";
 import { getClassroomPath, getLiveKitRoomName, getSessionId } from "../../utils/livekitRoom";
 import LmsLoader from "../../components/common/LmsLoader";
@@ -196,27 +196,24 @@ export default function ClassCalendar() {
   });
 
   const typeOptions = ["Regular Class", "Extra Class"];
-  const courseSelectOptions = courses.map((course) => ({
-    value: getCourseId(course),
-    label: courseDisplayName(course),
-  }));
+  const courseSelectOptions = toCourseSelectOptions(courses);
   const teacherSelectOptions = teachers.map((teacher) => ({
     value: teacher._id || teacher.id,
     label: getTeacherName(teacher),
   }));
 
-  // Unique list of courses for filter dropdown (prefer API courses, then session labels)
+  // Unique list of courses for filter dropdown — never show Untitled Course
   const courseOptions = Array.from(
     new Map(
       [
         ...courseSelectOptions.map((option) => [option.label, option.label]),
         ...sessions
           .map((s) => s.course)
-          .filter(Boolean)
+          .filter((label) => hasValidCourseLabel(label))
           .map((label) => [label, label]),
       ]
     ).values()
-  ).filter((label) => label && label !== "Untitled Course" && label !== "Course");
+  );
 
   const statusOptions = [
     { label: "Live / Upcoming", value: "Live" },
