@@ -471,15 +471,34 @@ const CourseTable = () => {
       {selectedCourse && (() => {
         const isDark =
           document.documentElement.getAttribute("data-theme") === "dark";
+        const bg = isDark ? "#1E293B" : "#fff";
+        const headerBg = isDark ? "#0F172A" : "#F8FAFC";
+        const text = isDark ? "#E2E8F0" : "#0F172A";
+        const muted = isDark ? "#94A3B8" : "#64748B";
+        const border = isDark ? "#334155" : "#E2E8F0";
+        const soft = isDark ? "#0F172A" : "#F8FAFC";
+        const code = getCourseCode(selectedCourse);
+        const board = getCourseBoard(selectedCourse) || "General Board";
+        const active = selectedCourse.isActive !== false;
 
-        const badgeStyle = (bg) => ({
-          background: bg,
-          color: "#fff",
-          padding: "6px 12px",
-          borderRadius: "20px",
-          fontSize: "12px",
-          fontWeight: 600,
-        });
+        const chip = (label, bgColor, color) => (
+          <span
+            key={label}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              background: bgColor,
+              color,
+              padding: "4px 10px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 700,
+              lineHeight: 1.2,
+            }}
+          >
+            {label}
+          </span>
+        );
 
         return (
           <>
@@ -487,7 +506,7 @@ const CourseTable = () => {
               style={{
                 position: "fixed",
                 inset: 0,
-                background: "rgba(0,0,0,0.7)",
+                background: "rgba(15,23,42,0.55)",
                 backdropFilter: "blur(4px)",
                 zIndex: 1040,
               }}
@@ -495,78 +514,176 @@ const CourseTable = () => {
             />
 
             <div className="modal fade show" style={{ display: "block", zIndex: 1050 }}>
-              <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 520 }}>
                 <div
-                  className="modal-content"
+                  className="modal-content border-0"
                   style={{
-                    borderRadius: "14px",
-                    background: isDark ? "#1E293B" : "#fff",
-                    color: isDark ? "#E2E8F0" : "#111",
+                    borderRadius: 16,
+                    background: bg,
+                    color: text,
+                    overflow: "hidden",
+                    boxShadow: "0 24px 48px rgba(15,23,42,0.22)",
                   }}
                 >
-                  <div className="modal-header">
-                    <h5 className="modal-title fw-bold">Course Details</h5>
+                  <div
+                    className="d-flex align-items-start justify-content-between gap-2"
+                    style={{
+                      background: headerBg,
+                      borderBottom: `1px solid ${border}`,
+                      padding: "16px 18px",
+                    }}
+                  >
+                    <div className="d-flex align-items-start gap-3" style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          width: 42,
+                          height: 42,
+                          minWidth: 42,
+                          borderRadius: 12,
+                          background: "rgba(254,186,1,0.18)",
+                          color: "#B45309",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Icon icon="solar:book-bold" width={22} />
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            color: "#C98900",
+                            marginBottom: 2,
+                          }}
+                        >
+                          Course Details
+                        </div>
+                        <h5
+                          className="mb-0 fw-bold"
+                          style={{
+                            fontSize: 17,
+                            lineHeight: 1.35,
+                            letterSpacing: "-0.01em",
+                          }}
+                        >
+                          {courseDisplayName(selectedCourse)}
+                        </h5>
+                      </div>
+                    </div>
                     <button
+                      type="button"
                       className="btn-close"
-                      style={{ filter: isDark ? "invert(1)" : "none" }}
+                      style={{
+                        filter: isDark ? "invert(1)" : "none",
+                        flexShrink: 0,
+                        marginTop: 2,
+                      }}
                       onClick={() => setSelectedCourse(null)}
                     />
                   </div>
 
-                  <div className="modal-body">
-                    <div className="flex-grow-1 mb-3">
-                      <h4 className="fw-bold mb-1">{courseDisplayName(selectedCourse)}</h4>
-
-                      <div className="d-flex gap-2 flex-wrap mt-2">
-                        {getCourseCode(selectedCourse) ? (
-                          <span style={badgeStyle("#0F172A")}>
-                            {getCourseCode(selectedCourse)}
-                          </span>
-                        ) : null}
-                        <span style={badgeStyle("#3B82F6")}>
-                          {getCourseBoard(selectedCourse) || "General Board"}
-                        </span>
-                        <span
-                          style={badgeStyle(
-                            selectedCourse.isActive !== false ? "#16A34A" : "#DC2626"
-                          )}
-                        >
-                          {selectedCourse.isActive !== false ? "Active" : "Inactive"}
-                        </span>
-                      </div>
+                  <div style={{ padding: "18px" }}>
+                    <div className="d-flex flex-wrap gap-2 mb-3">
+                      {code
+                        ? chip(code, isDark ? "#1E293B" : "#0F172A", "#FEBA01")
+                        : null}
+                      {chip(board, "rgba(59,130,246,0.14)", "#1D4ED8")}
+                      {chip(
+                        active ? "Active" : "Inactive",
+                        active ? "rgba(22,163,74,0.14)" : "rgba(220,38,38,0.14)",
+                        active ? "#15803D" : "#B91C1C"
+                      )}
                     </div>
 
-                    <div className="mt-3">
-                      <h6 className="fw-semibold mb-1">Description</h6>
-                      <p className="text-muted mb-0">
+                    <div
+                      className="rounded-3 mb-3"
+                      style={{
+                        background: soft,
+                        border: `1px solid ${border}`,
+                        padding: "12px 14px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          color: muted,
+                          marginBottom: 6,
+                        }}
+                      >
+                        Description
+                      </div>
+                      <p
+                        className="mb-0"
+                        style={{ fontSize: 14, lineHeight: 1.55, color: text }}
+                      >
                         {selectedCourse.description || "No description provided."}
                       </p>
                     </div>
 
-                    <div className="mt-4 d-flex justify-content-between text-muted small">
-                      <span>
-                        Created:{" "}
-                        {selectedCourse.createdAt
-                          ? new Date(selectedCourse.createdAt).toLocaleDateString()
-                          : "N/A"}
-                      </span>
+                    <div
+                      className="d-flex align-items-center gap-2"
+                      style={{ fontSize: 12, color: muted }}
+                    >
+                      <Icon icon="solar:calendar-linear" width={15} />
+                      Created{" "}
+                      {selectedCourse.createdAt
+                        ? new Date(selectedCourse.createdAt).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "N/A"}
                     </div>
                   </div>
 
-                  <div className="modal-footer">
-                    <Link
-                      to={`/course/${getCourseId(selectedCourse)}`}
-                      className="btn btn-outline-secondary"
-                    >
-                      Open Course Link
-                    </Link>
+                  <div
+                    className="d-flex flex-wrap justify-content-end gap-2"
+                    style={{
+                      borderTop: `1px solid ${border}`,
+                      padding: "12px 18px",
+                      background: headerBg,
+                    }}
+                  >
                     <button
+                      type="button"
                       className="btn"
-                      style={{ background: "#FEBA01", color: "#000", fontWeight: "bold" }}
+                      style={{
+                        background: isDark ? "#334155" : "#F1F5F9",
+                        color: text,
+                        fontWeight: 600,
+                        fontSize: 13,
+                        padding: "7px 14px",
+                        minHeight: 34,
+                        borderRadius: 8,
+                      }}
                       onClick={() => setSelectedCourse(null)}
                     >
                       Close
                     </button>
+                    <Link
+                      to={`/course/${getCourseId(selectedCourse)}`}
+                      className="btn d-inline-flex align-items-center gap-1"
+                      style={{
+                        background: "#FEBA01",
+                        color: "#111",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        padding: "7px 14px",
+                        minHeight: 34,
+                        borderRadius: 8,
+                        textDecoration: "none",
+                      }}
+                    >
+                      <Icon icon="solar:link-bold" width={15} />
+                      Open Course
+                    </Link>
                   </div>
                 </div>
               </div>

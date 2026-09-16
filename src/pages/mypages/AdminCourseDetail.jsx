@@ -69,6 +69,7 @@ const AdminCourseDetail = () => {
   const textColor = isDark ? "#F8FAFC" : "#0F172A";
   const muted = isDark ? "#94A3B8" : "#64748B";
   const border = isDark ? "#334155" : "#E2E8F0";
+  const softBg = isDark ? "#0F172A" : "#F8FAFC";
   const code = getCourseCode(course);
   const board = getCourseBoard(course);
   const teachers =
@@ -78,11 +79,25 @@ const AdminCourseDetail = () => {
       ? [typeof course.instructor === "object" ? course.instructor : null].filter(Boolean)
       : []);
 
+  const actionBtn = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    fontSize: 13,
+    fontWeight: 600,
+    padding: "7px 12px",
+    minHeight: 34,
+    borderRadius: 8,
+    border: "none",
+    lineHeight: 1.2,
+    whiteSpace: "nowrap",
+  };
+
   return (
-    <div className="lms-page">
+    <div>
       <FormPageHeader
         title="Course Details"
-        subtitle="Direct course link with unique course code and board information"
+        subtitle="Course code, board, and assigned instructors"
         backTo="/all-courses"
       />
 
@@ -91,9 +106,10 @@ const AdminCourseDetail = () => {
         style={{
           background: cardBg,
           color: textColor,
-          borderRadius: "18px",
+          borderRadius: 16,
           border: `1px solid ${border}`,
-          padding: "28px",
+          padding: "20px 22px",
+          width: "100%",
         }}
       >
         {loading ? (
@@ -103,7 +119,7 @@ const AdminCourseDetail = () => {
             <p style={{ color: muted }}>This course link is invalid or the course was removed.</p>
             <button
               type="button"
-              className="lms-btn-primary"
+              className="lms-btn-primary lms-btn-sm"
               onClick={() => navigate("/all-courses")}
             >
               Back to Courses
@@ -111,10 +127,19 @@ const AdminCourseDetail = () => {
           </div>
         ) : (
           <>
-            <div className="d-flex flex-wrap justify-content-between gap-3 mb-4">
-              <div>
-                <span className="lms-kicker">Course Link</span>
-                <h3 className="fw-bold mb-2" style={{ fontSize: "28px" }}>
+            <div className="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+              <div style={{ minWidth: 0, flex: "1 1 280px" }}>
+                <span className="lms-kicker">Course</span>
+                <h3
+                  className="fw-bold mb-2"
+                  style={{
+                    fontSize: "1.25rem",
+                    lineHeight: 1.35,
+                    letterSpacing: "-0.01em",
+                    marginTop: 4,
+                    wordBreak: "break-word",
+                  }}
+                >
                   {courseDisplayName(course)}
                 </h3>
                 <div className="d-flex flex-wrap gap-2">
@@ -129,48 +154,54 @@ const AdminCourseDetail = () => {
                   </span>
                 </div>
               </div>
+
               <Link
                 to={`/edit-course/${getCourseId(course)}`}
                 state={{ course }}
-                className="lms-btn-primary d-flex align-items-center gap-1"
+                className="lms-btn-primary lms-btn-sm"
+                style={{ flexShrink: 0 }}
               >
-                <Icon icon="solar:pen-bold" width="18" />
+                <Icon icon="solar:pen-bold" width="15" />
                 Edit Course
               </Link>
             </div>
 
-            <div className="row g-3">
-              <div className="col-md-4">
-                <div className="lms-info-tile">
+            <div className="row g-2 g-md-3">
+              <div className="col-sm-4">
+                <div className="lms-info-tile" style={{ padding: "12px 14px" }}>
                   <small>Subject</small>
-                  <strong>{getCourseTitle(course) || "N/A"}</strong>
+                  <strong style={{ fontSize: 14 }}>{getCourseTitle(course) || "N/A"}</strong>
                 </div>
               </div>
-              <div className="col-md-4">
-                <div className="lms-info-tile">
+              <div className="col-sm-4">
+                <div className="lms-info-tile" style={{ padding: "12px 14px" }}>
                   <small>Education Board</small>
-                  <strong>{board || "Not assigned"}</strong>
+                  <strong style={{ fontSize: 14 }}>{board || "Not assigned"}</strong>
                 </div>
               </div>
-              <div className="col-md-4">
-                <div className="lms-info-tile">
+              <div className="col-sm-4">
+                <div className="lms-info-tile" style={{ padding: "12px 14px" }}>
                   <small>Course Code</small>
-                  <strong>{code || "Not generated"}</strong>
+                  <strong style={{ fontSize: 14 }}>{code || "Not generated"}</strong>
                 </div>
               </div>
             </div>
 
-            <div className="mt-4">
-              <h6 className="fw-bold">Description</h6>
-              <p style={{ color: muted, marginBottom: 0 }}>
+            <div className="mt-3">
+              <h6 className="fw-bold mb-1" style={{ fontSize: 14 }}>
+                Description
+              </h6>
+              <p style={{ color: muted, marginBottom: 0, fontSize: 14, lineHeight: 1.55 }}>
                 {course.description || "No description provided."}
               </p>
             </div>
 
             <div className="mt-4">
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <h6 className="fw-bold mb-0">Assigned Teachers</h6>
-                <small style={{ color: muted }}>
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <h6 className="fw-bold mb-0" style={{ fontSize: 14 }}>
+                  Assigned Teachers
+                </h6>
+                <small style={{ color: muted, fontSize: 12 }}>
                   {teachers.length} instructor{teachers.length === 1 ? "" : "s"}
                 </small>
               </div>
@@ -179,9 +210,10 @@ const AdminCourseDetail = () => {
                 <div
                   className="p-3 rounded-3"
                   style={{
-                    background: isDark ? "#0F172A" : "#F8FAFC",
+                    background: softBg,
                     border: `1px dashed ${border}`,
                     color: muted,
+                    fontSize: 13,
                   }}
                 >
                   No teachers are assigned to this course yet.
@@ -191,16 +223,21 @@ const AdminCourseDetail = () => {
                   {teachers.map((teacher) => (
                     <div
                       key={teacher._id || teacher.id || teacher.name}
-                      className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-3 rounded-3"
+                      className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 px-3 rounded-3"
                       style={{
-                        background: isDark ? "#0F172A" : "#F8FAFC",
+                        background: softBg,
                         border: `1px solid ${border}`,
                       }}
                     >
                       <button
                         type="button"
-                        className="btn p-0 text-start d-flex align-items-center gap-3"
-                        style={{ background: "transparent", border: "none", color: textColor }}
+                        className="btn p-0 text-start d-flex align-items-center gap-2"
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: textColor,
+                          minWidth: 0,
+                        }}
                         onClick={() =>
                           navigate("/all-teacher", {
                             state: { viewTeacherId: teacher._id || teacher.id },
@@ -215,50 +252,52 @@ const AdminCourseDetail = () => {
                             )}`
                           }
                           alt=""
-                          width={44}
-                          height={44}
+                          width={36}
+                          height={36}
                           style={{
+                            width: 36,
+                            height: 36,
                             borderRadius: "50%",
                             objectFit: "cover",
                             border: "2px solid #FEBA01",
+                            flexShrink: 0,
                           }}
                         />
-                        <div>
-                          <div className="fw-bold" style={{ color: "#FEBA01" }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            className="fw-bold"
+                            style={{
+                              color: "#B45309",
+                              fontSize: 13,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {teacher.name || "Teacher"}
                           </div>
-                          <small style={{ color: muted }}>
+                          <small style={{ color: muted, fontSize: 12 }}>
                             {teacher.email || teacher.qualification || "Assigned instructor"}
                           </small>
                         </div>
                       </button>
 
-                      <div className="d-flex gap-2">
+                      <div className="d-flex gap-2 flex-shrink-0">
                         <button
                           type="button"
-                          className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
-                          style={{
-                            background: "#FEBA01",
-                            color: "#000",
-                            borderRadius: 8,
-                          }}
+                          style={{ ...actionBtn, background: "#FEBA01", color: "#111" }}
                           onClick={() =>
                             navigate("/all-teacher", {
                               state: { viewTeacherId: teacher._id || teacher.id },
                             })
                           }
                         >
-                          <Icon icon="iconamoon:eye-light" width={16} />
+                          <Icon icon="iconamoon:eye-light" width={15} />
                           View
                         </button>
                         <button
                           type="button"
-                          className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
-                          style={{
-                            background: "#0EA5E9",
-                            color: "#fff",
-                            borderRadius: 8,
-                          }}
+                          style={{ ...actionBtn, background: "#0EA5E9", color: "#fff" }}
                           onClick={async () => {
                             try {
                               const res = await axiosInstance.get("/api/admin/teachers");
@@ -274,7 +313,7 @@ const AdminCourseDetail = () => {
                             }
                           }}
                         >
-                          <Icon icon="solar:pen-bold" width={16} />
+                          <Icon icon="solar:pen-bold" width={15} />
                           Edit
                         </button>
                       </div>

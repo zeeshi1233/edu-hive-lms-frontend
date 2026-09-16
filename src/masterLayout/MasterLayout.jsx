@@ -138,17 +138,17 @@ const MasterLayout = ({ children }) => {
             }}
           >
             <img
-              src="assets/images/logo.png"
+              src="/assets/images/logo.png"
               alt="site logo"
               className="light-logo"
             />
             <img
-              src="assets/images/logo.png"
+              src="/assets/images/logo.png"
               alt="site logo"
               className="dark-logo"
             />
             <img
-              src="assets/images/logo.png"
+              src="/assets/images/logo.png"
               alt="site logo"
               className="logo-icon"
             />

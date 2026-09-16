@@ -135,18 +135,18 @@
 }
 
 .lms-page-title {
-  font-size: 28px;
+  font-size: 1.35rem;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
   margin: 0;
   color: #0f172a;
 }
 
 .lms-page-subtitle {
   color: #64748b;
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 0.875rem;
+  line-height: 1.45;
 }
 
 .lms-kicker {
@@ -172,12 +172,29 @@
   background: #feba01;
   color: #111;
   font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
   border: none;
   border-radius: 10px;
-  padding: 10px 18px;
-  min-height: 44px;
+  padding: 9px 16px;
+  min-height: 40px;
+  height: auto;
+  width: auto;
+  max-width: max-content;
+  flex: 0 0 auto;
+  align-self: flex-start;
   text-decoration: none;
+  white-space: nowrap;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lms-btn-primary.lms-btn-sm,
+.lms-btn-sm {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  min-height: 34px;
+  border-radius: 8px;
 }
 
 .lms-btn-primary:hover {
@@ -295,7 +312,7 @@
 
 @media (max-width: 768px) {
   .lms-page-title {
-    font-size: 22px;
+    font-size: 1.2rem;
   }
 
   .lms-form-header {
