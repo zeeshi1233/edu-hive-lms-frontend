@@ -12,6 +12,7 @@ import {
   getCourseTitle,
 } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
+import notify from "../../utils/notify";
 
 const AddCourse = () => {
   const navigate = useNavigate();
@@ -97,15 +98,17 @@ const AddCourse = () => {
 
       if (isEdit) {
         await axiosInstance.put(`/api/admin/courses/${editCourse._id}`, payload);
+        notify.success("Course updated successfully");
       } else {
         await axiosInstance.post("/api/admin/courses", payload);
+        notify.success("Course created successfully");
       }
 
       navigate("/all-courses");
       resetForm();
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Something went wrong!");
+      notify.error(error.response?.data?.message || "Something went wrong!");
     } finally {
       setLoading(false);
     }

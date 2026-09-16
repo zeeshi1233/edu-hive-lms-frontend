@@ -5,6 +5,7 @@ import axiosInstance from "../../../api/axiosInstance";
 import LmsFilterBar from "../../common/LmsFilterBar";
 import LmsLoader from "../../common/LmsLoader";
 import { courseDisplayName, hasValidCourseLabel } from "../../../utils/lmsData";
+import notify from "../../../utils/notify";
 
 const dayStart = (value) => {
   if (!value) return null;
@@ -21,34 +22,7 @@ const enrolledCourseLabel = (c) =>
   c?.courseTitle ||
   "";
 
-const buildStudentEmailBody = (student) => {
-  const courses = (student.enrolledCourses || [])
-    .map(enrolledCourseLabel)
-    .filter((label) => hasValidCourseLabel(label));
-
-  return [
-    `Student Profile — EduHive LMS`,
-    ``,
-    `Name: ${student.name || "N/A"}`,
-    `Email: ${student.email || "N/A"}`,
-    `Phone: ${student.phone || "N/A"}`,
-    `Gender: ${student.gender || "N/A"}`,
-    `Date of Birth: ${
-      student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : "N/A"
-    }`,
-    `Address: ${student.address || "N/A"}`,
-    `Guardian: ${student.guardianName || "N/A"}`,
-    `Guardian Phone: ${student.guardianPhone || "N/A"}`,
-    `Admission Date: ${
-      student.admissionDate
-        ? new Date(student.admissionDate).toLocaleDateString()
-        : "N/A"
-    }`,
-    `Enrolled Courses: ${courses.length ? courses.join(", ") : "None"}`,
-    ``,
-    `— Sent from EduHive LMS`,
-  ].join("\n");
-};
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 
 const StudentTable = () => {
   const navigate = useNavigate();
@@ -62,6 +36,11 @@ const StudentTable = () => {
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedGender, setSelectedGender] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -144,16 +123,46 @@ const StudentTable = () => {
     });
   }, [students, startDate, endDate, selectedCourse, selectedGender, searchQuery]);
 
-  const handleSendEmail = (student) => {
-    const defaultEmail = student.email || "";
-    const recipient =
-      window.prompt("Send student profile email to:", defaultEmail) || "";
-    const trimmed = recipient.trim();
-    if (!trimmed) return;
+  const openEmailModal = (student) => {
+    setEmailTo(student?.email || "");
+    setEmailError("");
+    setEmailModalOpen(true);
+  };
 
-    const subject = encodeURIComponent(`EduHive Student Profile — ${student.name || ""}`);
-    const body = encodeURIComponent(buildStudentEmailBody(student));
-    window.open(`mailto:${trimmed}?subject=${subject}&body=${body}`, "_blank");
+  const closeEmailModal = () => {
+    if (emailSending) return;
+    setEmailModalOpen(false);
+    setEmailError("");
+  };
+
+  const confirmSendEmail = async () => {
+    if (!selectedStudent?._id) return;
+    const trimmed = emailTo.trim();
+    if (!trimmed) {
+      setEmailError("Recipient email is required");
+      return;
+    }
+    if (!isValidEmail(trimmed)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+
+    setEmailSending(true);
+    setEmailError("");
+    try {
+      await axiosInstance.post(`/api/admin/students/${selectedStudent._id}/send-email`, {
+        to: trimmed,
+      });
+      notify.success(`Profile email sent to ${trimmed}`);
+      setEmailModalOpen(false);
+    } catch (error) {
+      const msg =
+        error.response?.data?.message || "Failed to send email. Check EMAIL settings.";
+      setEmailError(msg);
+      notify.error(msg);
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   return (
@@ -518,7 +527,7 @@ const StudentTable = () => {
                           color: "#fff",
                           fontWeight: "bold",
                         }}
-                        onClick={() => handleSendEmail(selectedStudent)}
+                        onClick={() => openEmailModal(selectedStudent)}
                       >
                         <Icon icon="solar:letter-bold" className="me-1" width={16} />
                         Send Email
@@ -538,6 +547,158 @@ const StudentTable = () => {
             </>
           );
         })()}
+
+      {/* Verify recipient email modal */}
+      {emailModalOpen && selectedStudent && (
+        <>
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.55)",
+              backdropFilter: "blur(3px)",
+              zIndex: 1060,
+            }}
+            onClick={closeEmailModal}
+          />
+          <div className="modal fade show" style={{ display: "block", zIndex: 1070 }}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div
+                className="modal-content"
+                style={{ borderRadius: 14, overflow: "hidden", border: "none" }}
+              >
+                <div
+                  className="modal-header"
+                  style={{
+                    background: "#F8FAFC",
+                    borderBottom: "1px solid #E2E8F0",
+                    padding: "16px 20px",
+                  }}
+                >
+                  <div className="d-flex align-items-center gap-2">
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: "rgba(14,165,233,0.15)",
+                        color: "#0284C7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon icon="solar:letter-bold" width={22} />
+                    </div>
+                    <div>
+                      <h5 className="modal-title fw-bold mb-0">Verify Email Recipient</h5>
+                      <small className="text-muted">
+                        Profile of <strong>{selectedStudent.name}</strong> will be emailed
+                      </small>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={closeEmailModal}
+                    disabled={emailSending}
+                  />
+                </div>
+
+                <div className="modal-body" style={{ padding: "20px" }}>
+                  <label className="fw-semibold mb-2 d-block" style={{ fontSize: 13 }}>
+                    Send to email address
+                  </label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={emailTo}
+                    onChange={(e) => {
+                      setEmailTo(e.target.value);
+                      setEmailError("");
+                    }}
+                    placeholder="name@example.com"
+                    disabled={emailSending}
+                    style={{
+                      borderRadius: 10,
+                      padding: "11px 14px",
+                      borderColor: emailError ? "#F87171" : "#E2E8F0",
+                    }}
+                    autoFocus
+                  />
+                  {emailError ? (
+                    <div className="mt-2" style={{ color: "#DC2626", fontSize: 13 }}>
+                      {emailError}
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-muted" style={{ fontSize: 12 }}>
+                      Default is the student&apos;s registered email. You can change it before sending.
+                    </div>
+                  )}
+
+                  <div
+                    className="mt-3 p-3 rounded-3"
+                    style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}
+                  >
+                    <div style={{ fontSize: 12, color: "#64748B", marginBottom: 6 }}>
+                      Email preview
+                    </div>
+                    <div className="fw-semibold" style={{ fontSize: 14 }}>
+                      EduHive Student Profile — {selectedStudent.name}
+                    </div>
+                    <div className="text-muted mt-1" style={{ fontSize: 12 }}>
+                      Includes photo, contact, guardian, admission date, and enrolled courses
+                      (same layout as this profile modal).
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  className="modal-footer"
+                  style={{ borderTop: "1px solid #E2E8F0", gap: 8 }}
+                >
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{
+                      background: "#F1F5F9",
+                      fontWeight: 600,
+                      borderRadius: 8,
+                    }}
+                    onClick={closeEmailModal}
+                    disabled={emailSending}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn d-flex align-items-center gap-1"
+                    style={{
+                      background: "#0EA5E9",
+                      color: "#fff",
+                      fontWeight: 700,
+                      borderRadius: 8,
+                      minWidth: 130,
+                      justifyContent: "center",
+                    }}
+                    onClick={confirmSendEmail}
+                    disabled={emailSending}
+                  >
+                    {emailSending ? (
+                      <LmsLoader variant="button" label="Sending..." />
+                    ) : (
+                      <>
+                        <Icon icon="solar:plain-bold" width={16} />
+                        Send Email
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 };

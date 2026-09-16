@@ -8,6 +8,7 @@ import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
 import { extractList, getCourseId, toCourseSelectOptions } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
+import notify from "../../utils/notify";
 
 const AddStudent = () => {
   const navigate = useNavigate();
@@ -178,7 +179,7 @@ const AddStudent = () => {
       if (isEdit) {
         const studentId = editStudent._id || editStudent.id;
         await axiosInstance.put(`/api/admin/students/${studentId}`, formData);
-        alert("Student updated successfully");
+        notify.success("Student updated successfully");
       } else {
         formData.append("role", "student");
         const res = await axiosInstance.post("/api/auth/register", formData);
@@ -196,6 +197,7 @@ const AddStudent = () => {
             )
           );
         }
+        notify.success("Student registered successfully");
       }
 
       navigate("/all-students");
@@ -204,7 +206,7 @@ const AddStudent = () => {
     } catch (error) {
       console.error(error);
       const validationMsg = error.response?.data?.errors?.[0]?.msg;
-      alert(
+      notify.error(
         error.response?.data?.message ||
           validationMsg ||
           error.response?.data?.error ||

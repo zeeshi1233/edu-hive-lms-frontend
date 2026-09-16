@@ -15,6 +15,7 @@ import {
 import { getClassroomPath, getLiveKitRoomName, getSessionId } from "../../utils/livekitRoom";
 import LmsLoader from "../../components/common/LmsLoader";
 import LmsAsyncState from "../../components/common/LmsAsyncState";
+import notify from "../../utils/notify";
 
 export default function ClassCalendar() {
   const { role, user } = useAuth();
@@ -234,7 +235,7 @@ export default function ClassCalendar() {
   const joinClass = (session) => {
     const id = getSessionId(session);
     if (!id) {
-      alert("This class does not have a valid session id yet.");
+      notify.warning("This class does not have a valid session id yet.");
       return;
     }
     setJoiningId(id);
@@ -250,7 +251,7 @@ export default function ClassCalendar() {
     e.preventDefault();
     if (saving) return;
     if (!newSession.title || !newSession.courseId || !newSession.teacherId) {
-      alert("Please select a course and instructor before scheduling.");
+      notify.warning("Please select a course and instructor before scheduling.");
       return;
     }
 
@@ -285,9 +286,10 @@ export default function ClassCalendar() {
       await loadCalendarData();
       setShowAddModal(false);
       setNewSession(emptySession);
+      notify.success("Class scheduled successfully");
     } catch (err) {
       console.error("Failed to persist scheduled class", err);
-      alert(err.response?.data?.message || "Failed to schedule class. Please try again.");
+      notify.error(err.response?.data?.message || "Failed to schedule class. Please try again.");
     } finally {
       setSaving(false);
     }

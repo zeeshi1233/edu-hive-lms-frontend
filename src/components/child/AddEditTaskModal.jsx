@@ -1,6 +1,7 @@
 // src/components/AddEditTaskModal.js
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form } from 'react-bootstrap';
+import notify from '../../utils/notify';
 
 const AddEditTaskModal = ({ show, handleClose, handleSave, task }) => {
     const isEdit = Boolean(task);
@@ -41,7 +42,7 @@ const AddEditTaskModal = ({ show, handleClose, handleSave, task }) => {
 
     const onSave = () => {
         if (!title || !description || !tag || !date) {
-            alert('Please fill in all required fields.');
+            notify.warning('Please fill in all required fields.');
             return;
         }
 

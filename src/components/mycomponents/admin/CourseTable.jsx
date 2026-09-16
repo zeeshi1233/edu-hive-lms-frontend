@@ -14,6 +14,7 @@ import {
   generateCourseCode,
 } from "../../../utils/lmsData";
 import LmsLoader from "../../common/LmsLoader";
+import notify from "../../../utils/notify";
 
 const CourseTable = () => {
   const [courses, setCourses] = useState([]);
@@ -60,8 +61,9 @@ const CourseTable = () => {
       await axiosInstance.delete(`/api/admin/courses/${deleteCourse._id || getCourseId(deleteCourse)}`);
       setCourses((prev) => prev.filter((c) => c._id !== deleteCourse._id));
       setDeleteCourse(null);
+      notify.success("Course deleted successfully");
     } catch (error) {
-      alert(error.response?.data?.message || "Delete failed");
+      notify.error(error.response?.data?.message || "Delete failed");
     } finally {
       setDeleting(false);
     }

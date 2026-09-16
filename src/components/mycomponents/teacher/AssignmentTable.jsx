@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import LmsFilterBar from "../../common/LmsFilterBar";
+import notify from "../../../utils/notify";
 
 const AssignmentTable = () => {
   const tableRef = useRef(null);
@@ -80,9 +81,10 @@ const AssignmentTable = () => {
       await axiosInstance.delete(`/api/teacher/assignments/${deleteAssignment._id}`);
       setDeleteAssignment(null);
       getAssignments();
+      notify.success("Assignment deleted successfully");
     } catch (error) {
       console.error("Delete failed:", error);
-      alert("❌ Failed to delete assignment");
+      notify.error("Failed to delete assignment");
     } finally {
       setDeleteLoading(false);
     }

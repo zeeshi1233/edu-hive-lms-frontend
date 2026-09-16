@@ -9,6 +9,7 @@ import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
 import { extractList, toCourseSelectOptions } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
+import notify from "../../utils/notify";
 
 const AddTeacher = () => {
   const navigate = useNavigate();
@@ -151,15 +152,16 @@ const AddTeacher = () => {
     try {
       if (isEdit) {
         await axiosInstance.put(`/api/admin/teachers/${editTeacher._id}`, formData);
-        alert("Teacher updated successfully");
+        notify.success("Teacher updated successfully");
       } else {
         await axiosInstance.post("/api/auth/register", formData);
+        notify.success("Teacher created successfully");
       }
       navigate("/all-teacher");
     } catch (err) {
       console.error(err);
       const validationMsg = err.response?.data?.errors?.[0]?.msg;
-      alert(
+      notify.error(
         err.response?.data?.message ||
           validationMsg ||
           err.response?.data?.error ||

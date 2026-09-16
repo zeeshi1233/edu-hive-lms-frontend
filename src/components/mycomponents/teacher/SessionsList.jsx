@@ -14,6 +14,7 @@ import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom
 import LmsAsyncState from "../../common/LmsAsyncState";
 import LmsLoader from "../../common/LmsLoader";
 import LmsFilterBar from "../../common/LmsFilterBar";
+import notify from "../../../utils/notify";
 
 const NOT_CONDUCTED_REASONS = [
   "Teacher Not Present",
@@ -210,7 +211,7 @@ const SessionsList = ({ viewAll }) => {
   const saveStatus = async () => {
     if (!editingSession) return;
     if (statusValue === "not_conducted" && !reasonValue) {
-      alert("Please select a reason for Not Conducted");
+      notify.warning("Please select a reason for Not Conducted");
       return;
     }
 
@@ -241,8 +242,9 @@ const SessionsList = ({ viewAll }) => {
         )
       );
       setEditingSession(null);
+      notify.success("Session updated successfully");
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to update session status");
+      notify.error(error.response?.data?.message || "Failed to update session status");
     } finally {
       setSaving(false);
     }
@@ -269,8 +271,9 @@ const SessionsList = ({ viewAll }) => {
           item._id === session._id ? { ...item, status: "Cancelled" } : item
         )
       );
+      notify.success("Class cancelled");
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to cancel session");
+      notify.error(error.response?.data?.message || "Failed to cancel session");
     } finally {
       setCancellingId("");
     }

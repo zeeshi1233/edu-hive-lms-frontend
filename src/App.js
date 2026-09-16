@@ -39,12 +39,14 @@ import ClassRoomPage from "./pages/mypages/ClassRoomPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import NotFoundRedirect from "./components/NotFoundRedirect";
+import AppToast from "./components/common/AppToast";
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <RouteScrollToTop />
+        <AppToast />
         <Routes>
           <Route
             path="/"

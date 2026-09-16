@@ -378,37 +378,100 @@ const TeacherTable = () => {
                     }}
                   >
                     <div
-                      className="modal-header"
-                      style={{ background: headerBg, borderBottom: `1px solid ${border}` }}
+                      className="modal-header align-items-center"
+                      style={{
+                        background: headerBg,
+                        borderBottom: `1px solid ${border}`,
+                        padding: "16px 20px",
+                        minHeight: "auto",
+                      }}
                     >
-                      <div className="d-flex align-items-center gap-3">
-                        <img
-                          src={
-                            selectedTeacher.profileImage ||
-                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
-                              selectedTeacher.name || "teacher"
-                            )}`
-                          }
-                          width={60}
-                          height={60}
+                      <div
+                        className="d-flex align-items-center gap-3"
+                        style={{ minWidth: 0, flex: 1, paddingRight: 8 }}
+                      >
+                        <div
                           style={{
+                            width: 64,
+                            height: 64,
+                            minWidth: 64,
+                            minHeight: 64,
                             borderRadius: "50%",
-                            objectFit: "cover",
-                            border: `2px solid ${border}`,
+                            overflow: "hidden",
+                            flexShrink: 0,
+                            border: "2px solid #FEBA01",
+                            background: isDark ? "#0F172A" : "#F1F5F9",
                           }}
-                          alt=""
-                        />
-                        <div>
-                          <h5 className="mb-1 fw-bold">{selectedTeacher.name}</h5>
-                          <small style={{ color: isDark ? "#94A3B8" : "#64748B" }}>
-                            {selectedTeacher.qualification || "Instructor"}
-                            {selectedTeacher.isActive === false ? " · Inactive" : " · Active"}
-                          </small>
+                        >
+                          <img
+                            src={
+                              selectedTeacher.profileImage ||
+                              `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                                selectedTeacher.name || "teacher"
+                              )}`
+                            }
+                            alt={selectedTeacher.name || "Teacher"}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              objectPosition: "center",
+                              display: "block",
+                            }}
+                          />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <h5
+                            className="mb-1 fw-bold"
+                            style={{
+                              margin: 0,
+                              lineHeight: 1.3,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {selectedTeacher.name}
+                          </h5>
+                          <div className="d-flex flex-wrap align-items-center gap-2">
+                            <small
+                              style={{
+                                color: isDark ? "#94A3B8" : "#64748B",
+                                lineHeight: 1.35,
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {selectedTeacher.qualification || "Instructor"}
+                            </small>
+                            <span
+                              className="badge"
+                              style={{
+                                background: selectedTeacher.isActive === false
+                                  ? "#FEE2E2"
+                                  : "#DCFCE7",
+                                color: selectedTeacher.isActive === false
+                                  ? "#991B1B"
+                                  : "#166534",
+                                fontWeight: 600,
+                                fontSize: 11,
+                              }}
+                            >
+                              {selectedTeacher.isActive === false ? "Inactive" : "Active"}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <button
+                        type="button"
                         className="btn-close"
-                        style={{ filter: isDark ? "invert(1)" : "none" }}
+                        style={{
+                          filter: isDark ? "invert(1)" : "none",
+                          flexShrink: 0,
+                          margin: 0,
+                        }}
                         onClick={() => setSelectedTeacher(null)}
                       />
                     </div>

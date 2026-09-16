@@ -11,6 +11,7 @@ import {
   toCourseSelectOptions,
 } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
+import notify from "../../utils/notify";
 
 const SessionCreate = () => {
   const navigate = useNavigate();
@@ -109,11 +110,12 @@ const SessionCreate = () => {
         type: values.type,
       };
       await axiosInstance.post("/api/admin/sessions", payload);
+      notify.success("Session created successfully");
       navigate("/all-session");
       resetForm();
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Failed to create session");
+      notify.error(error.response?.data?.message || "Failed to create session");
     } finally {
       setLoading(false);
     }

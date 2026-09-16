@@ -715,3 +715,45 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ========== EduHive Toasts ========== */
+.lms-toast {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18) !important;
+  font-family: inherit !important;
+  font-weight: 600 !important;
+  min-height: 52px !important;
+}
+
+.lms-toast-body {
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  padding: 2px 0 !important;
+}
+
+.Toastify__toast--success {
+  background: linear-gradient(135deg, #16a34a, #15803d) !important;
+}
+
+.Toastify__toast--error {
+  background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+}
+
+.Toastify__toast--warning {
+  background: linear-gradient(135deg, #feba01, #d97706) !important;
+  color: #111827 !important;
+}
+
+.Toastify__toast--warning .Toastify__close-button,
+.Toastify__toast--warning .Toastify__toast-icon {
+  color: #111827 !important;
+  opacity: 0.85;
+}
+
+.Toastify__toast--info {
+  background: linear-gradient(135deg, #0ea5e9, #0369a1) !important;
+}
+
+.lms-toast-progress {
+  background: rgba(255, 255, 255, 0.55) !important;
+}

@@ -3,6 +3,7 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axiosInstance from "../../api/axiosInstance";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
+import notify from "../../utils/notify";
 
 const EditCourse = () => {
   const { id } = useParams();
@@ -61,8 +62,9 @@ const EditCourse = () => {
       });
 
       navigate("/all-courses");
+      notify.success("Course updated successfully");
     } catch (error) {
-      alert(error.response?.data?.message || "Update failed");
+      notify.error(error.response?.data?.message || "Update failed");
     } finally {
       setLoading(false);
     }

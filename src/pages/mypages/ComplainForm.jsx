@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import LmsLoader from "../../components/common/LmsLoader";
+import notify from "../../utils/notify";
 
 export default function ComplainForm() {
   const [form, setForm] = useState({
@@ -18,9 +19,8 @@ export default function ComplainForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // basic validation (extra safety)
     if (!form.name || !form.category || !form.message) {
-      alert("Please fill all required fields");
+      notify.warning("Please fill all required fields");
       return;
     }
 
@@ -32,12 +32,8 @@ export default function ComplainForm() {
 
     try {
       setLoading(true);
-
       await axiosInstance.post("/api/student/complaints", payload);
-
-      alert("✅ Your complaint has been submitted successfully!");
-
-      // reset form
+      notify.success("Your complaint has been submitted successfully");
       setForm({
         name: "",
         category: "",
@@ -45,7 +41,7 @@ export default function ComplainForm() {
       });
     } catch (error) {
       console.error(error);
-      alert("❌ Failed to submit complaint");
+      notify.error("Failed to submit complaint");
     } finally {
       setLoading(false);
     }
