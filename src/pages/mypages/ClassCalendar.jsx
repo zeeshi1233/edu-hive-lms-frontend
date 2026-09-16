@@ -8,7 +8,6 @@ import SearchableSelect from "../../components/common/SearchableSelect";
 import {
   extractList,
   getTeacherName,
-  hasValidCourseLabel,
   mergeSessionLists,
   persistScheduledClasses,
   toCourseSelectOptions,
@@ -202,18 +201,8 @@ export default function ClassCalendar() {
     label: getTeacherName(teacher),
   }));
 
-  // Unique list of courses for filter dropdown — never show Untitled Course
-  const courseOptions = Array.from(
-    new Map(
-      [
-        ...courseSelectOptions.map((option) => [option.label, option.label]),
-        ...sessions
-          .map((s) => s.course)
-          .filter((label) => hasValidCourseLabel(label))
-          .map((label) => [label, label]),
-      ]
-    ).values()
-  );
+  // Filter dropdown: only real courses from API (never session titles like "testing1")
+  const courseOptions = courseSelectOptions.map((option) => option.label);
 
   const statusOptions = [
     { label: "Scheduled", value: "Scheduled" },

@@ -126,13 +126,10 @@ const SessionsList = ({ viewAll }) => {
     return "Scheduled";
   };
 
-  const courseOptions = useMemo(() => {
-    const fromApi = toCourseSelectOptions(courses).map((o) => o.label);
-    const fromSessions = sessions
-      .map(courseLabelOf)
-      .filter((label) => hasValidCourseLabel(label));
-    return Array.from(new Set([...fromApi, ...fromSessions]));
-  }, [courses, sessions]);
+  const courseOptions = useMemo(
+    () => toCourseSelectOptions(courses).map((o) => o.label),
+    [courses]
+  );
 
   const filteredSessions = useMemo(() => {
     if (viewAll) return sessions.slice(0, 6);
@@ -147,8 +144,14 @@ const SessionsList = ({ viewAll }) => {
       if (end && sessionDay && sessionDay > end) return false;
 
       if (selectedCourse) {
-        const label = courseLabelOf(s).toLowerCase();
-        if (!label.includes(selectedCourse.toLowerCase())) return false;
+        // Match real course name only — never fall back to session title (e.g. "testing1")
+        const realCourse =
+          courseDisplayName(s.course) ||
+          s.courseTitle ||
+          (typeof s.course === "string" && hasValidCourseLabel(s.course) ? s.course : "");
+        if (!String(realCourse).toLowerCase().includes(selectedCourse.toLowerCase())) {
+          return false;
+        }
       }
 
       if (selectedStatus) {

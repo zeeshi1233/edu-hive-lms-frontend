@@ -81,8 +81,17 @@ const AddStudent = () => {
       .max(11, "Max 11 digits"),
     enrolledCourses: Yup.array().min(1, "Select at least one course").required("Course is required"),
     admissionDate: Yup.date().required("Admission date is required"),
-    profileImage: isEdit ? Yup.mixed() : Yup.mixed().required("Profile image required"),
+    // Edit: keep existing photo — new upload optional
+    profileImage: Yup.mixed().nullable().notRequired(),
   });
+
+  const validateForm = (values) => {
+    const errors = {};
+    if (!isEdit && !(values.profileImage instanceof File)) {
+      errors.profileImage = "Profile image required";
+    }
+    return errors;
+  };
 
   const formBg = isDark ? "#0F172A" : "#fff";
   const inputBg = isDark ? "#1E293B" : "#fff";
@@ -230,6 +239,7 @@ const AddStudent = () => {
           enableReinitialize
           initialValues={initialValues}
           validationSchema={validationSchema}
+          validate={validateForm}
           onSubmit={onSubmit}
         >
           {({ values, setFieldValue }) => (
@@ -333,7 +343,7 @@ const AddStudent = () => {
 
               <div style={colStyle}>
                 <label style={labelStyle}>
-                  {isEdit ? "Profile Image" : "Profile Image *"}
+                  {isEdit ? "Profile Image (optional — keep current photo)" : "Profile Image *"}
                 </label>
                 <input
                   type="file"
@@ -341,17 +351,28 @@ const AddStudent = () => {
                   style={{ ...inputStyle, padding: "6px" }}
                   onChange={(e) => {
                     const file = e.target.files[0];
-                    setFieldValue("profileImage", file);
-                    if (file) setPreview(URL.createObjectURL(file));
+                    setFieldValue("profileImage", file || null);
+                    if (file) {
+                      setPreview(URL.createObjectURL(file));
+                    } else if (isEdit && editStudent?.profileImage) {
+                      setPreview(editStudent.profileImage);
+                    }
                   }}
                 />
                 <ErrorMessage name="profileImage" component="div" style={errorStyle} />
                 {preview && (
-                  <img
-                    src={preview}
-                    alt="preview"
-                    style={{ width: "100px", marginTop: "10px", borderRadius: "10px" }}
-                  />
+                  <div className="mt-2">
+                    <img
+                      src={preview}
+                      alt="preview"
+                      style={{ width: "100px", borderRadius: "10px" }}
+                    />
+                    {isEdit && !(values.profileImage instanceof File) && (
+                      <div style={{ fontSize: 12, color: labelColor, marginTop: 6 }}>
+                        Current photo will be kept if you don’t upload a new one.
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
