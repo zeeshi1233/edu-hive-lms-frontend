@@ -156,11 +156,11 @@ export default function ClassCalendar() {
     const isNotConducted = raw === "not conducted" || raw === "not_conducted";
     const isCancelled = raw === "cancelled";
     const isScheduled =
-      raw === "scheduled" || raw === "pending" || (!isLive && !isConducted && !isNotConducted && !isCancelled);
+      raw === "scheduled" ||
+      raw === "pending" ||
+      (!isLive && !isConducted && !isNotConducted && !isCancelled);
 
     switch (filter) {
-      case "Live":
-        return isLive || (isScheduled && new Date(session.startTime || session.date) >= new Date());
       case "Scheduled":
         return isScheduled || isLive;
       case "Completed":
@@ -216,7 +216,6 @@ export default function ClassCalendar() {
   );
 
   const statusOptions = [
-    { label: "Live / Upcoming", value: "Live" },
     { label: "Scheduled", value: "Scheduled" },
     { label: "Completed", value: "Completed" },
     { label: "Cancelled", value: "Cancelled" },

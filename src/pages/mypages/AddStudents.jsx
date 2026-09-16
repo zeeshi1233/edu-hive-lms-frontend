@@ -2,15 +2,19 @@ import React, { useEffect, useState } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axiosInstance from "../../api/axiosInstance";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
-import { extractList, toCourseSelectOptions } from "../../utils/lmsData";
+import { extractList, getCourseId, toCourseSelectOptions } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
 
 const AddStudent = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const editStudent = location.state;
+  const isEdit = Boolean(editStudent?._id || editStudent?.id);
+
   const [preview, setPreview] = useState(null);
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark"
@@ -31,25 +35,41 @@ const AddStudent = () => {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (isEdit && editStudent?.profileImage) {
+      setPreview(editStudent.profileImage);
+    }
+  }, [isEdit, editStudent]);
+
+  const enrolledIds = (editStudent?.enrolledCourses || [])
+    .map((c) => getCourseId(c.course || c) || c.courseId || c._id)
+    .filter(Boolean);
+
   const initialValues = {
-    name: "",
-    email: "",
+    name: editStudent?.name || "",
+    email: editStudent?.email || "",
     password: "",
-    phone: "",
-    gender: "",
-    dateOfBirth: "",
-    address: "",
-    guardianName: "",
-    guardianPhone: "",
-    enrolledCourses: [],
+    phone: editStudent?.phone || "",
+    gender: editStudent?.gender || "",
+    dateOfBirth: editStudent?.dateOfBirth
+      ? String(editStudent.dateOfBirth).split("T")[0]
+      : "",
+    address: editStudent?.address || "",
+    guardianName: editStudent?.guardianName || "",
+    guardianPhone: editStudent?.guardianPhone || "",
+    enrolledCourses: enrolledIds,
     profileImage: null,
-    admissionDate: "",
+    admissionDate: editStudent?.admissionDate
+      ? String(editStudent.admissionDate).split("T")[0]
+      : "",
   };
 
   const validationSchema = Yup.object({
     name: Yup.string().required("Student name is required"),
     email: Yup.string().email("Invalid email").required("Email is required"),
-    password: Yup.string().min(6, "Minimum 6 characters").required("Password is required"),
+    password: isEdit
+      ? Yup.string().min(6, "Minimum 6 characters")
+      : Yup.string().min(6, "Minimum 6 characters").required("Password is required"),
     phone: Yup.string()
       .required("Phone number is required")
       .matches(/^\d+$/, "Only numbers allowed")
@@ -61,7 +81,7 @@ const AddStudent = () => {
       .max(11, "Max 11 digits"),
     enrolledCourses: Yup.array().min(1, "Select at least one course").required("Course is required"),
     admissionDate: Yup.date().required("Admission date is required"),
-    profileImage: Yup.mixed().required("Profile image required"),
+    profileImage: isEdit ? Yup.mixed() : Yup.mixed().required("Profile image required"),
   });
 
   const formBg = isDark ? "#0F172A" : "#fff";
@@ -112,7 +132,7 @@ const AddStudent = () => {
 
   const onSubmit = async (values, { resetForm }) => {
     const formData = new FormData();
-    const skipKeys = ["enrolledCourses", "feePlan", "totalFees", "feePaid", "batchTiming"];
+    const skipKeys = ["feePlan", "totalFees", "feePaid", "batchTiming"];
 
     Object.keys(values).forEach((key) => {
       if (skipKeys.includes(key)) return;
@@ -122,8 +142,15 @@ const AddStudent = () => {
         }
         return;
       }
+      if (key === "password" && !values.password) return;
       if (key === "gender" && values.gender) {
         formData.append("gender", String(values.gender).toLowerCase());
+        return;
+      }
+      if (key === "enrolledCourses") {
+        (values.enrolledCourses || []).forEach((courseId) => {
+          formData.append("enrolledCourses", courseId);
+        });
         return;
       }
       if (values[key] !== undefined && values[key] !== null && values[key] !== "") {
@@ -131,30 +158,35 @@ const AddStudent = () => {
       }
     });
 
-    // Backend Student model still requires these legacy fee fields
     formData.append("feePlan", "monthly");
     formData.append("totalFees", "0");
     if (!values.address) formData.append("address", "N/A");
     if (!values.dateOfBirth) formData.append("dateOfBirth", "2000-01-01");
 
-    formData.append("role", "student");
     setLoading(true);
 
     try {
-      const res = await axiosInstance.post("/api/auth/register", formData);
-      const studentData = res.data?.student || res.data?.user || res.data;
-      const studentId = studentData?.id || studentData?._id;
+      if (isEdit) {
+        const studentId = editStudent._id || editStudent.id;
+        await axiosInstance.put(`/api/admin/students/${studentId}`, formData);
+        alert("Student updated successfully");
+      } else {
+        formData.append("role", "student");
+        const res = await axiosInstance.post("/api/auth/register", formData);
+        const studentData = res.data?.student || res.data?.user || res.data;
+        const studentId = studentData?.id || studentData?._id;
 
-      if (studentId && values.enrolledCourses?.length) {
-        await Promise.all(
-          values.enrolledCourses.map((courseId) =>
-            axiosInstance.post("/api/admin/enrollments", {
-              studentId,
-              courseId,
-              status: "active",
-            })
-          )
-        );
+        if (studentId && values.enrolledCourses?.length) {
+          await Promise.all(
+            values.enrolledCourses.map((courseId) =>
+              axiosInstance.post("/api/admin/enrollments", {
+                studentId,
+                courseId,
+                status: "active",
+              })
+            )
+          );
+        }
       }
 
       navigate("/all-students");
@@ -167,7 +199,7 @@ const AddStudent = () => {
         error.response?.data?.message ||
           validationMsg ||
           error.response?.data?.error ||
-          "Registration failed"
+          (isEdit ? "Failed to update student" : "Registration failed")
       );
     } finally {
       setLoading(false);
@@ -177,7 +209,7 @@ const AddStudent = () => {
   return (
     <div className="lms-page">
       <FormPageHeader
-        title="Add New Student"
+        title={isEdit ? "Edit Student" : "Add New Student"}
         subtitle="Assign courses with the same searchable multi-select used for teachers"
         backTo="/all-students"
       />
@@ -188,11 +220,18 @@ const AddStudent = () => {
           padding: "28px",
           margin: "8px auto",
           borderRadius: "16px",
-          boxShadow: isDark ? "0 8px 24px rgba(0,0,0,0.28)" : "0 8px 24px rgba(15,23,42,0.05)",
+          boxShadow: isDark
+            ? "0 8px 24px rgba(0,0,0,0.28)"
+            : "0 8px 24px rgba(15,23,42,0.05)",
           color: textColor,
         }}
       >
-        <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onSubmit}>
+        <Formik
+          enableReinitialize
+          initialValues={initialValues}
+          validationSchema={validationSchema}
+          onSubmit={onSubmit}
+        >
           {({ values, setFieldValue }) => (
             <Form style={rowStyle}>
               <div style={colStyle}>
@@ -208,7 +247,9 @@ const AddStudent = () => {
               </div>
 
               <div style={colStyle}>
-                <label style={labelStyle}>Password *</label>
+                <label style={labelStyle}>
+                  {isEdit ? "Password (leave blank to keep)" : "Password *"}
+                </label>
                 <div style={{ position: "relative" }}>
                   <Field
                     name="password"
@@ -291,7 +332,9 @@ const AddStudent = () => {
               </div>
 
               <div style={colStyle}>
-                <label style={labelStyle}>Profile Image *</label>
+                <label style={labelStyle}>
+                  {isEdit ? "Profile Image" : "Profile Image *"}
+                </label>
                 <input
                   type="file"
                   accept="image/*"
@@ -326,11 +369,17 @@ const AddStudent = () => {
                 >
                   Close
                 </button>
-                <button type="submit" className="lms-btn-primary" disabled={loading || fetchingCourses}>
+                <button
+                  type="submit"
+                  className="lms-btn-primary"
+                  disabled={loading || fetchingCourses}
+                >
                   {loading ? (
-                    <LmsLoader variant="button" label="Adding..." />
+                    <LmsLoader variant="button" label={isEdit ? "Saving..." : "Adding..."} />
                   ) : fetchingCourses ? (
                     <LmsLoader variant="button" label="Loading..." />
+                  ) : isEdit ? (
+                    "Update Student"
                   ) : (
                     "Add Student"
                   )}

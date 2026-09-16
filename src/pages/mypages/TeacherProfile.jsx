@@ -125,12 +125,10 @@ const TeacherProfile = () => {
                   ) : (
                     <>
                       <Info label="Qualification" value={user.qualification} />
-                      <Info label="Specialization" value={user.specialization} />
                       <Info
                         label="Experience"
-                        value={`${user.experienceYears} Years`}
+                        value={`${user.experienceYears || 0} Years`}
                       />
-                      <Info label="Salary Type" value={user.salaryType} />
                       <Info label="Availability" value={user.availability} />
                       <Info
                         label="Status"

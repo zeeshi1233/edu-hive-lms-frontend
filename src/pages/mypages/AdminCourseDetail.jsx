@@ -71,6 +71,12 @@ const AdminCourseDetail = () => {
   const border = isDark ? "#334155" : "#E2E8F0";
   const code = getCourseCode(course);
   const board = getCourseBoard(course);
+  const teachers =
+    course?.assignedTeachers ||
+    course?.teachers ||
+    (course?.instructor
+      ? [typeof course.instructor === "object" ? course.instructor : null].filter(Boolean)
+      : []);
 
   return (
     <div className="lms-page">
@@ -112,9 +118,7 @@ const AdminCourseDetail = () => {
                   {courseDisplayName(course)}
                 </h3>
                 <div className="d-flex flex-wrap gap-2">
-                  {code ? (
-                    <span className="lms-chip lms-chip-gold">{code}</span>
-                  ) : null}
+                  {code ? <span className="lms-chip lms-chip-gold">{code}</span> : null}
                   {board ? <span className="lms-chip lms-chip-blue">{board}</span> : null}
                   <span
                     className={`lms-chip ${
@@ -161,6 +165,123 @@ const AdminCourseDetail = () => {
               <p style={{ color: muted, marginBottom: 0 }}>
                 {course.description || "No description provided."}
               </p>
+            </div>
+
+            <div className="mt-4">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h6 className="fw-bold mb-0">Assigned Teachers</h6>
+                <small style={{ color: muted }}>
+                  {teachers.length} instructor{teachers.length === 1 ? "" : "s"}
+                </small>
+              </div>
+
+              {teachers.length === 0 ? (
+                <div
+                  className="p-3 rounded-3"
+                  style={{
+                    background: isDark ? "#0F172A" : "#F8FAFC",
+                    border: `1px dashed ${border}`,
+                    color: muted,
+                  }}
+                >
+                  No teachers are assigned to this course yet.
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  {teachers.map((teacher) => (
+                    <div
+                      key={teacher._id || teacher.id || teacher.name}
+                      className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-3 rounded-3"
+                      style={{
+                        background: isDark ? "#0F172A" : "#F8FAFC",
+                        border: `1px solid ${border}`,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        className="btn p-0 text-start d-flex align-items-center gap-3"
+                        style={{ background: "transparent", border: "none", color: textColor }}
+                        onClick={() =>
+                          navigate("/all-teacher", {
+                            state: { viewTeacherId: teacher._id || teacher.id },
+                          })
+                        }
+                      >
+                        <img
+                          src={
+                            teacher.profileImage ||
+                            `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(
+                              teacher.name || "teacher"
+                            )}`
+                          }
+                          alt=""
+                          width={44}
+                          height={44}
+                          style={{
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            border: "2px solid #FEBA01",
+                          }}
+                        />
+                        <div>
+                          <div className="fw-bold" style={{ color: "#FEBA01" }}>
+                            {teacher.name || "Teacher"}
+                          </div>
+                          <small style={{ color: muted }}>
+                            {teacher.email || teacher.qualification || "Assigned instructor"}
+                          </small>
+                        </div>
+                      </button>
+
+                      <div className="d-flex gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
+                          style={{
+                            background: "#FEBA01",
+                            color: "#000",
+                            borderRadius: 8,
+                          }}
+                          onClick={() =>
+                            navigate("/all-teacher", {
+                              state: { viewTeacherId: teacher._id || teacher.id },
+                            })
+                          }
+                        >
+                          <Icon icon="iconamoon:eye-light" width={16} />
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
+                          style={{
+                            background: "#0EA5E9",
+                            color: "#fff",
+                            borderRadius: 8,
+                          }}
+                          onClick={async () => {
+                            try {
+                              const res = await axiosInstance.get("/api/admin/teachers");
+                              const list = res.data?.teachers || [];
+                              const full =
+                                list.find(
+                                  (t) =>
+                                    String(t._id) === String(teacher._id || teacher.id)
+                                ) || teacher;
+                              navigate("/add-teacher", { state: full });
+                            } catch {
+                              navigate("/add-teacher", { state: teacher });
+                            }
+                          }}
+                        >
+                          <Icon icon="solar:pen-bold" width={16} />
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}

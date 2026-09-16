@@ -8,7 +8,7 @@ const AllSessions = () => {
         <span className="lms-kicker">Scheduling</span>
         <h3 className="lms-page-title mb-1">All Sessions</h3>
         <p className="lms-page-subtitle mb-0">
-          Update conducted status here. New classes are scheduled from the Class Calendar.
+          Filter by date, course, class type, and conducted status. Cancel or update sessions here.
         </p>
       </div>
       <SessionsList viewAll={false} />
