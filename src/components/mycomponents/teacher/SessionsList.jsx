@@ -470,7 +470,7 @@ const SessionsList = ({ viewAll }) => {
                       setJoiningId(s._id);
                       navigate(getClassroomPath(s), {
                         state: {
-                          roomName: getLiveKitRoomName(s),
+                          roomName: s.roomName || "",
                           classTitle: s.title || courseLabel,
                         },
                       });
