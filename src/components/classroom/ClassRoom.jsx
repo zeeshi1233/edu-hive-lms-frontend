@@ -11,7 +11,6 @@ const fmt = (date, opts) =>
 
 const fmtTime = (d) => fmt(d, { hour: "2-digit", minute: "2-digit", hour12: true });
 const fmtDate = (d) => fmt(d, { day: "numeric", month: "short", year: "numeric" });
-const fmtFull = (d) => (d ? `${fmtDate(d)} · ${fmtTime(d)}` : "—");
 
 /* ─── status badge helper ─────────────────────────────────────────────────── */
 const StatusPill = ({ label, color }) => (

@@ -10,7 +10,7 @@ import {
   hasValidCourseLabel,
   toCourseSelectOptions,
 } from "../../../utils/lmsData";
-import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom";
+import { getClassroomPath } from "../../../utils/livekitRoom";
 import LmsAsyncState from "../../common/LmsAsyncState";
 import LmsLoader from "../../common/LmsLoader";
 import LmsFilterBar from "../../common/LmsFilterBar";
