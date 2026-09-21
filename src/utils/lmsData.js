@@ -155,6 +155,29 @@ export function getTeacherName(teacher) {
   return teacher.name || teacher.fullName || teacher.instructorName || "";
 }
 
+export function formatTime12h(timeOrDate) {
+  if (!timeOrDate) return "";
+  if (timeOrDate instanceof Date) {
+    return timeOrDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+  }
+  const str = String(timeOrDate).trim();
+  if (str.includes("T") || str.includes("-")) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true });
+    }
+  }
+  const m = str.match(/^(\d{1,2}):(\d{2})$/);
+  if (m) {
+    let hh = parseInt(m[1], 10);
+    const mm = m[2];
+    const ampm = hh >= 12 ? "PM" : "AM";
+    hh = hh % 12 || 12;
+    return `${String(hh).padStart(2, "0")}:${mm} ${ampm}`;
+  }
+  return str;
+}
+
 export function normalizeCalendarSession(session) {
   if (!session) return null;
 
@@ -162,19 +185,30 @@ export function normalizeCalendarSession(session) {
   const parsed = startSource ? new Date(startSource) : null;
   const validDate = parsed && !Number.isNaN(parsed.getTime());
 
-  const dateStr = validDate
-    ? parsed.toISOString().split("T")[0]
-    : String(session.date || "").slice(0, 10);
+  let dateStr = "";
+  let timeStr = "";
+  let time24 = "";
 
-  const timeStr = session.time
-    ? session.time
-    : validDate
-    ? parsed.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
-    : "10:00";
+  if (validDate) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    const d = String(parsed.getDate()).padStart(2, "0");
+    dateStr = `${y}-${m}-${d}`;
+    timeStr = parsed.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+    time24 = parsed.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  } else {
+    dateStr = String(session.date || "").slice(0, 10);
+    timeStr = session.time ? formatTime12h(session.time) : "10:00 AM";
+    time24 = session.time || "10:00";
+  }
 
   const courseObj =
     session.course && typeof session.course === "object" ? session.course : null;
@@ -227,6 +261,7 @@ export function normalizeCalendarSession(session) {
     teacherId: session.teacherId || teacherObj?._id || teacherObj?.id || "",
     date: dateStr,
     time: timeStr,
+    time24: time24 || "10:00",
     duration: session.duration || "60 mins",
     type,
     status,

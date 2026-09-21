@@ -41,6 +41,8 @@ const SessionsList = ({ viewAll }) => {
   const [typeValue, setTypeValue] = useState("Regular Class");
   const [reasonValue, setReasonValue] = useState("Others");
   const [saving, setSaving] = useState(false);
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
   const [joiningId, setJoiningId] = useState("");
   const [cancellingId, setCancellingId] = useState("");
   const [syncingId, setSyncingId] = useState("");
@@ -208,6 +210,21 @@ const SessionsList = ({ viewAll }) => {
         : "Regular Class"
     );
     setReasonValue(session.notConductedReason || "Others");
+    if (session.startTime) {
+      const d = new Date(session.startTime);
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        setEditDate(`${y}-${m}-${day}`);
+        setEditTime(`${hh}:${mm}`);
+      }
+    } else {
+      setEditDate("");
+      setEditTime("");
+    }
     setEditingSession(session);
   };
 
@@ -219,10 +236,21 @@ const SessionsList = ({ viewAll }) => {
     }
 
     setSaving(true);
+    let newStartIso;
+    if (editDate && editTime) {
+      const [y, m, d] = editDate.split("-").map(Number);
+      const [hh, mm] = editTime.split(":").map(Number);
+      const localDt = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0, 0, 0);
+      if (!isNaN(localDt.getTime())) {
+        newStartIso = localDt.toISOString();
+      }
+    }
+
     const payload = {
       status: statusValue,
       type: typeValue,
       notConductedReason: statusValue === "not_conducted" ? reasonValue : "",
+      ...(newStartIso ? { startTime: newStartIso, clientOffset: new Date().getTimezoneOffset() } : {}),
     };
 
     try {
@@ -240,6 +268,7 @@ const SessionsList = ({ viewAll }) => {
                 type: typeValue,
                 notConductedReason:
                   statusValue === "not_conducted" ? reasonValue : "",
+                ...(newStartIso ? { startTime: newStartIso } : {}),
               }
             : item
         )
@@ -648,6 +677,32 @@ const SessionsList = ({ viewAll }) => {
                       </select>
                     </div>
                   )}
+
+                  {canEditStatus && (
+                    <div className="mt-3 p-3 rounded-3" style={{ background: "#fffdf7", border: "1.5px solid #fde68a" }}>
+                      <label className="fw-semibold mb-2 d-block text-xs" style={{ color: "#92400e", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Scheduled Date & Time
+                      </label>
+                      <div className="row g-2">
+                        <div className="col-7">
+                          <input
+                            type="date"
+                            className="form-control form-control-sm"
+                            value={editDate}
+                            onChange={(e) => setEditDate(e.target.value)}
+                          />
+                        </div>
+                        <div className="col-5">
+                          <input
+                            type="time"
+                            className="form-control form-control-sm"
+                            value={editTime}
+                            onChange={(e) => setEditTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="modal-footer">
                   <button className="lms-btn-ghost" onClick={() => setEditingSession(null)}>
@@ -715,7 +770,7 @@ const SessionsList = ({ viewAll }) => {
                           { label: "Course", value: detailSession.course?.title || courseDisplayName(detailSession.course) || "—" },
                           { label: "Instructor (Host)", value: detailSession.instructor?.name || getTeacherName(detailSession.instructor) || "—" },
                           { label: "Date", value: detailSession.startTime ? new Date(detailSession.startTime).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
-                          { label: "Scheduled Time", value: detailSession.startTime ? new Date(detailSession.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—" },
+                          { label: "Scheduled Time", value: detailSession.startTime ? new Date(detailSession.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }) : "—" },
                           { label: "Duration", value: detailSession.duration || "60 mins" },
                           { label: "Status", value: detailSession.status || "Scheduled" },
                         ].map(({ label, value }) => (

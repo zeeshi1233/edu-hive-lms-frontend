@@ -101,12 +101,20 @@ const SessionCreate = () => {
   const onSubmit = async (values, { resetForm }) => {
     try {
       setLoading(true);
+      let startTime = values.startTime;
+      if (values.startTime) {
+        const localDate = new Date(values.startTime);
+        if (!isNaN(localDate.getTime())) {
+          startTime = localDate.toISOString();
+        }
+      }
       const payload = {
         title: values.title,
         courseId: values.courseId,
         teacherId: values.teacherId,
         topic: values.topic,
-        startTime: values.startTime,
+        startTime,
+        clientOffset: new Date().getTimezoneOffset(),
         type: values.type,
       };
       await axiosInstance.post("/api/admin/sessions", payload);

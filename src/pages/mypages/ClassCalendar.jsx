@@ -7,6 +7,7 @@ import LmsFilterBar from "../../components/common/LmsFilterBar";
 import SearchableSelect from "../../components/common/SearchableSelect";
 import {
   extractList,
+  formatTime12h,
   getTeacherName,
   mergeSessionLists,
   persistScheduledClasses,
@@ -60,13 +61,21 @@ export default function ClassCalendar() {
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
 
+  const getTodayLocalStr = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
   const emptySession = {
     title: "",
     course: "",
     courseId: "",
     instructor: user?.name || "",
     teacherId: user?._id || user?.id || "",
-    date: new Date().toISOString().split("T")[0],
+    date: getTodayLocalStr(),
     time: "10:00",
     duration: "60 mins",
     type: "Regular Class",
@@ -255,7 +264,15 @@ export default function ClassCalendar() {
       return;
     }
 
-    const startTime = `${newSession.date}T${newSession.time}`;
+    // Parse date and time in the user's LOCAL browser timezone
+    const [year, month, day] = (newSession.date || "").split("-").map(Number);
+    const [hour, minute] = (newSession.time || "10:00").split(":").map(Number);
+    const localDate = new Date(year, (month || 1) - 1, day || 1, hour || 0, minute || 0, 0, 0);
+    const startTime = !isNaN(localDate.getTime())
+      ? localDate.toISOString()
+      : `${newSession.date}T${newSession.time}`;
+    const clientOffset = new Date().getTimezoneOffset();
+
     const created = {
       ...newSession,
       _id: "s_" + Date.now(),
@@ -272,6 +289,7 @@ export default function ClassCalendar() {
         teacherId: newSession.teacherId,
         topic: newSession.title,
         startTime,
+        clientOffset,
         type: newSession.type,
         duration: newSession.duration,
         description: newSession.description,
@@ -966,9 +984,30 @@ export default function ClassCalendar() {
 
                 {/* Modal Footer */}
                 <div
-                  className="modal-footer"
+                  className="modal-footer d-flex align-items-center justify-content-between"
                   style={{ borderTop: `1px solid ${borderColor}` }}
                 >
+                  {role === "admin" ? (
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm"
+                      onClick={async () => {
+                        const id = getSessionId(selectedSession);
+                        if (!id || !window.confirm("Are you sure you want to delete this session?")) return;
+                        try {
+                          await axiosInstance.delete(`/api/admin/sessions/${id}`);
+                          notify.success("Session deleted successfully");
+                          setSelectedSession(null);
+                          await loadCalendarData();
+                        } catch (e) {
+                          notify.error(e.response?.data?.message || "Failed to delete session");
+                        }
+                      }}
+                    >
+                      <Icon icon="solar:trash-bin-trash-bold" className="me-1" />
+                      Delete Session
+                    </button>
+                  ) : <div />}
                   <button
                     className="btn btn-secondary"
                     onClick={() => setSelectedSession(null)}
@@ -1133,6 +1172,31 @@ export default function ClassCalendar() {
                             color: textColor,
                           }}
                         />
+                        <div className="d-flex align-items-center justify-content-between mt-1 px-1">
+                          <span className="text-xs fw-bold" style={{ color: "#FEBA01" }}>
+                            🕒 {formatTime12h(newSession.time)}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-sm py-0 px-2 text-xs"
+                            style={{
+                              background: "rgba(254,186,1,0.15)",
+                              color: isDark ? "#fde68a" : "#b45309",
+                              border: "1px solid #fde68a",
+                              borderRadius: "6px",
+                            }}
+                            onClick={() => {
+                              const [h, m] = (newSession.time || "10:00").split(":").map(Number);
+                              const newH = (h + 12) % 24;
+                              setNewSession({
+                                ...newSession,
+                                time: `${String(newH).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`,
+                              });
+                            }}
+                          >
+                            Switch to {parseInt((newSession.time || "10:00").split(":")[0], 10) >= 12 ? "AM" : "PM"}
+                          </button>
+                        </div>
                       </div>
 
                       <div className="col-md-4">
