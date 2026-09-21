@@ -1,24 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { LiveKitRoom, RoomAudioRenderer, VideoConference } from "@livekit/components-react";
-import "@livekit/components-styles";
 import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
-
-const isMediaPermissionError = (err) => {
-  const msg = String(err?.message || err || "").toLowerCase();
-  const name = String(err?.name || "").toLowerCase();
-  return (
-    name === "notallowederror" ||
-    name === "notfounderror" ||
-    name === "notreadableerror" ||
-    msg.includes("permission") ||
-    msg.includes("notallowed") ||
-    msg.includes("could not start video") ||
-    msg.includes("could not start audio") ||
-    msg.includes("device")
-  );
-};
 
 const ClassRoom = ({
   roomName,
@@ -30,13 +13,11 @@ const ClassRoom = ({
 }) => {
   const navigate = useNavigate();
   const leavingRef = useRef(false);
-  const connectedOnceRef = useRef(false);
-  const [token, setToken] = useState("");
-  const [serverUrl, setServerUrl] = useState("");
   const [status, setStatus] = useState("connecting");
   const [error, setError] = useState("");
-  const [mediaWarning, setMediaWarning] = useState("");
-  const [checkInTime, setCheckInTime] = useState(null);
+  const [sessionDetails, setSessionDetails] = useState(null);
+  const [googleMeetLink, setGoogleMeetLink] = useState("");
+  const [teacherCheckedIn, setTeacherCheckedIn] = useState(false);
 
   const role = (roleProp || localStorage.getItem("role") || "").toLowerCase();
   const isTeacher = role === "teacher";
@@ -75,15 +56,10 @@ const ClassRoom = ({
     }
   };
 
-  const fetchToken = async ({ silent } = {}) => {
-    if (!silent) {
-      setStatus("connecting");
-      setError("");
-      setMediaWarning("");
-      setToken("");
-      connectedOnceRef.current = false;
-      leavingRef.current = false;
-    }
+  const joinClassroom = async () => {
+    setStatus("connecting");
+    setError("");
+    leavingRef.current = false;
 
     try {
       const res = await axiosInstance.post("/api/classroom/join", {
@@ -91,205 +67,135 @@ const ClassRoom = ({
         sessionId,
       });
 
-      const nextToken = res.data?.token;
-      const nextUrl = res.data?.url || res.data?.livekitUrl;
-
-      if (!nextToken || !nextUrl) {
-        throw new Error("LiveKit token or server URL missing from API response");
+      const nextUrl = res.data?.googleMeetLink;
+      if (!nextUrl) {
+        throw new Error("Google Meet link missing from API response. Please contact the administrator.");
       }
 
-      setToken(nextToken);
-      setServerUrl(nextUrl);
-      setCheckInTime(res.data?.teacherCheckInTime || null);
-      setStatus("connecting");
-      setError("");
+      setGoogleMeetLink(nextUrl);
+      setSessionDetails(res.data?.session);
+      setTeacherCheckedIn(res.data?.teacherCheckedIn);
+      setStatus("connected");
     } catch (err) {
-      const code = err.response?.data?.code;
-      if (code === "WAITING_FOR_TEACHER") {
+      console.error("Join Classroom Error:", err);
+      const resStatus = err.response?.status;
+      const data = err.response?.data || {};
+      
+      let errorMsg = data.message || err.message || "Failed to join classroom";
+      if (resStatus === 403 && data.code === "WAITING_FOR_TEACHER") {
         setStatus("waiting");
-        setError(err.response?.data?.message || "Waiting for instructor to start the class");
+        setError("Waiting for instructor to start the class...");
         return;
       }
+      
       setStatus("error");
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          "Could not join the virtual classroom"
-      );
+      setError(errorMsg);
     }
   };
 
   useEffect(() => {
-    if (!sessionId) {
-      setStatus("error");
-      setError("Missing class session id");
-      return;
+    if (sessionId) {
+      joinClassroom();
     }
-    fetchToken();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, displayName]);
+  }, [sessionId]);
 
-  useEffect(() => {
-    if (status !== "waiting") return undefined;
-    const timer = setInterval(() => fetchToken({ silent: true }), 5000);
-    return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, sessionId]);
-
-  const shell = {
-    minHeight: "calc(100vh - 140px)",
-    borderRadius: "18px",
-    overflow: "hidden",
-    background: "#0F172A",
-    color: "#F8FAFC",
+  const handleLaunchMeet = () => {
+    if (googleMeetLink) {
+      window.open(googleMeetLink, "_blank", "noopener,noreferrer");
+    }
   };
 
-  if ((status === "connecting" && !token) || status === "waiting") {
+  if (status === "connecting" || status === "waiting") {
     return (
-      <div className="d-flex flex-column align-items-center justify-content-center p-5" style={shell}>
-        <div
-          className="mb-3 d-flex align-items-center justify-content-center"
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: 16,
-            background: "rgba(254, 186, 1, 0.16)",
-            color: "#FEBA01",
-          }}
-        >
-          <Icon
-            icon={status === "waiting" ? "solar:hourglass-bold" : "solar:videocamera-record-bold"}
-            width="32"
-          />
-        </div>
-        <h4 className="fw-bold mb-1">
-          {status === "waiting" ? "Waiting for instructor" : "Connecting to class..."}
-        </h4>
-        <p className="mb-0 text-center" style={{ color: "#94A3B8", maxWidth: 420 }}>
-          {status === "waiting"
-            ? error || "The class will start when the instructor checks in."
-            : classTitle || "Preparing your EduHive classroom"}
-        </p>
+      <div className="classroom-wrapper flex flex-col items-center justify-center min-h-screen">
+        <Icon icon="eos-icons:loading" width="64" height="64" className="text-primary" />
+        <h2 className="mt-4 text-2xl font-bold">
+          {status === "waiting" ? "Waiting for Instructor" : "Connecting to Classroom..."}
+        </h2>
+        {error && <p className="text-gray-500 mt-2">{error}</p>}
+        {status === "waiting" && (
+          <button onClick={joinClassroom} className="mt-6 bg-primary text-white px-6 py-2 rounded-md">
+            Retry Connection
+          </button>
+        )}
+        <button onClick={endClassroom} className="mt-4 text-red-500 hover:underline">
+          Go Back
+        </button>
       </div>
     );
   }
 
-  if (status === "error" || status === "disconnected") {
+  if (status === "error") {
     return (
-      <div className="d-flex flex-column align-items-center justify-content-center p-5 text-center" style={shell}>
-        <Icon
-          icon={status === "disconnected" ? "solar:logout-3-bold" : "solar:danger-triangle-bold"}
-          width="42"
-          style={{ color: "#FEBA01" }}
-        />
-        <h4 className="fw-bold mt-3 mb-2">
-          {status === "disconnected"
-            ? isTeacher
-              ? "Class ended"
-              : "You left the classroom"
-            : "Unable to join class"}
-        </h4>
-        <p style={{ color: "#94A3B8", maxWidth: 420 }}>
-          {error ||
-            (isTeacher
-              ? "Instructor checkout is saved. Students can no longer join this class."
-              : "The class has ended. You can go back to the dashboard.")}
-        </p>
-        <div className="d-flex flex-wrap gap-2 justify-content-center">
-          <button type="button" className="lms-btn-ghost" onClick={() => navigate(leavePath())}>
-            Back to Dashboard
-          </button>
-          <button
-            type="button"
-            className="lms-btn-primary"
-            onClick={() => {
-              leavingRef.current = false;
-              fetchToken();
-            }}
-          >
-            Rejoin Class
-          </button>
-        </div>
+      <div className="classroom-wrapper flex flex-col items-center justify-center min-h-screen bg-red-50">
+        <Icon icon="mdi:alert-circle-outline" width="64" height="64" className="text-red-500" />
+        <h2 className="mt-4 text-2xl font-bold text-red-600">Access Denied</h2>
+        <p className="text-red-400 mt-2 max-w-md text-center">{error}</p>
+        <button onClick={endClassroom} className="mt-6 bg-red-500 text-white px-6 py-2 rounded-md">
+          Return to Dashboard
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="lms-classroom" style={shell}>
-      <div
-        className="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2"
-        style={{ background: "#111827", borderBottom: "1px solid #1F2937" }}
-      >
-        <div>
-          <span className="lms-kicker mb-0">EduHive Classroom</span>
-          <h6 className="mb-0 fw-bold text-white">{classTitle || roomName}</h6>
-          {isTeacher && checkInTime && (
-            <small style={{ color: "#94A3B8" }}>
-              Checked in at {new Date(checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </small>
-          )}
+    <div className="classroom-wrapper bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-2xl text-center">
+        
+        {/* Verification Badge */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-green-100 text-green-700 px-4 py-1 rounded-full flex items-center text-sm font-medium">
+            <Icon icon="mdi:shield-check" className="mr-2" width="20" />
+            {isTeacher ? "Instructor Verified" : "Student Enrolled & Verified"}
+          </div>
         </div>
-        <button type="button" className="lms-btn-ghost" onClick={leaveClassroom}>
-          {isTeacher ? "End Class" : "Leave Class"}
-        </button>
+
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          {sessionDetails?.title || classTitle || "Live Class"}
+        </h1>
+        
+        <p className="text-gray-500 mb-8">
+          Welcome, <strong>{displayName}</strong>. Your check-in has been logged.
+        </p>
+
+        <div className="bg-gray-100 p-6 rounded-lg mb-8 text-left">
+          <div className="flex justify-between mb-4">
+            <span className="text-gray-500 font-medium">Course:</span>
+            <span className="font-semibold text-gray-800">{sessionDetails?.course?.title || "N/A"}</span>
+          </div>
+          <div className="flex justify-between mb-4">
+            <span className="text-gray-500 font-medium">Instructor:</span>
+            <span className="font-semibold text-gray-800">{sessionDetails?.instructor?.name || "N/A"}</span>
+          </div>
+          <div className="flex justify-between mb-4">
+            <span className="text-gray-500 font-medium">Duration:</span>
+            <span className="font-semibold text-gray-800">{sessionDetails?.duration || "60 mins"}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button 
+            onClick={handleLaunchMeet}
+            className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-colors"
+          >
+            <Icon icon="mdi:google-meet" width="24" className="mr-2" />
+            Launch Google Meet
+          </button>
+          
+          <button 
+            onClick={leaveClassroom}
+            className="flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-700 font-bold py-3 px-8 rounded-lg transition-colors"
+          >
+            <Icon icon="mdi:exit-to-app" width="24" className="mr-2" />
+            Leave & Checkout
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-400 mt-8 flex items-center justify-center">
+          <Icon icon="mdi:lock" className="mr-1" />
+          Access is restricted to authorized EduHive students only.
+        </p>
       </div>
-
-      {mediaWarning && (
-        <div
-          className="px-3 py-2 d-flex align-items-center gap-2"
-          style={{ background: "rgba(254,186,1,0.12)", color: "#FDE68A", fontSize: 13 }}
-        >
-          <Icon icon="solar:danger-triangle-bold" width="18" />
-          {mediaWarning}
-        </div>
-      )}
-
-      <LiveKitRoom
-        key={token}
-        token={token}
-        serverUrl={serverUrl}
-        connect
-        // Don't force camera/mic on connect — permission denials were aborting the room
-        video={false}
-        audio={false}
-        data-lk-theme="default"
-        style={{ height: "calc(100vh - 210px)" }}
-        onConnected={() => {
-          connectedOnceRef.current = true;
-          setStatus("connected");
-          setError("");
-        }}
-        onDisconnected={() => {
-          if (leavingRef.current) return;
-          // Ignore premature disconnects before a successful connect (e.g. media abort)
-          if (!connectedOnceRef.current) return;
-          setStatus("disconnected");
-        }}
-        onError={(err) => {
-          if (isMediaPermissionError(err)) {
-            setMediaWarning(
-              "Camera/microphone permission denied. Join continues without media — allow access in the browser, then turn camera/mic on from the toolbar."
-            );
-            return;
-          }
-          // Don't tear down a live room for transient errors
-          if (connectedOnceRef.current) {
-            setMediaWarning(err?.message || "A classroom error occurred");
-            return;
-          }
-          setStatus("error");
-          setError(err?.message || "Classroom connection failed");
-        }}
-        onMediaDeviceFailure={(err) => {
-          setMediaWarning(
-            err?.message ||
-              "Could not start camera/microphone. You remain in class — enable devices from the control bar when ready."
-          );
-        }}
-      >
-        <VideoConference />
-        <RoomAudioRenderer />
-      </LiveKitRoom>
     </div>
   );
 };

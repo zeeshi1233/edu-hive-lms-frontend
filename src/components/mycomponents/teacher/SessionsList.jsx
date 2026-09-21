@@ -43,6 +43,7 @@ const SessionsList = ({ viewAll }) => {
   const [saving, setSaving] = useState(false);
   const [joiningId, setJoiningId] = useState("");
   const [cancellingId, setCancellingId] = useState("");
+  const [syncingId, setSyncingId] = useState("");
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -279,6 +280,21 @@ const SessionsList = ({ viewAll }) => {
     }
   };
 
+  const syncAttendance = async (session) => {
+    if (!canEditStatus) return;
+    setSyncingId(session._id);
+    try {
+      const res = await axiosInstance.post(`/api/classroom/${session._id}/sync-attendance`);
+      notify.success(res.data.message || "Attendance synced successfully!");
+      // Optionally refresh sessions to show updated data
+      getSessions();
+    } catch (error) {
+      notify.error(error.response?.data?.message || "Failed to sync attendance");
+    } finally {
+      setSyncingId("");
+    }
+  };
+
   const badgeClass = (label) => {
     if (label === "Conducted") return "bg-success";
     if (label === "Not Conducted") return "bg-danger";
@@ -475,6 +491,30 @@ const SessionsList = ({ viewAll }) => {
                           <>
                             <Icon icon="solar:close-circle-bold" width="16" />
                             Cancel Class
+                          </>
+                        )}
+                      </button>
+                    )}
+                    
+                    {!isCancelled && (
+                      <button
+                        type="button"
+                        className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
+                        style={{
+                          background: "#E0E7FF",
+                          color: "#4338CA",
+                          borderRadius: "8px",
+                        }}
+                        disabled={syncingId === s._id}
+                        onClick={() => syncAttendance(s)}
+                        title="Sync Google Meet Attendance"
+                      >
+                        {syncingId === s._id ? (
+                          <LmsLoader variant="button" label="Syncing..." />
+                        ) : (
+                          <>
+                            <Icon icon="mdi:sync" width="16" />
+                            Sync
                           </>
                         )}
                       </button>
