@@ -44,6 +44,8 @@ const SessionsList = ({ viewAll }) => {
   const [joiningId, setJoiningId] = useState("");
   const [cancellingId, setCancellingId] = useState("");
   const [syncingId, setSyncingId] = useState("");
+  const [detailSession, setDetailSession] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -286,12 +288,24 @@ const SessionsList = ({ viewAll }) => {
     try {
       const res = await axiosInstance.post(`/api/classroom/${session._id}/sync-attendance`);
       notify.success(res.data.message || "Attendance synced successfully!");
-      // Optionally refresh sessions to show updated data
       getSessions();
     } catch (error) {
       notify.error(error.response?.data?.message || "Failed to sync attendance");
     } finally {
       setSyncingId("");
+    }
+  };
+
+  const openDetail = async (session) => {
+    setDetailLoading(true);
+    setDetailSession({ ...session, _loading: true });
+    try {
+      const res = await axiosInstance.get(`/api/admin/sessions/${session._id}`);
+      setDetailSession(res.data.session || res.data);
+    } catch (e) {
+      setDetailSession({ ...session, _error: e.response?.data?.message || "Failed to load details" });
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -434,6 +448,17 @@ const SessionsList = ({ viewAll }) => {
                 </div>
 
                 <span className={`badge me-1 ${badgeClass(label)}`}>{label}</span>
+
+                {/* View Detail button — always visible */}
+                <button
+                  type="button"
+                  className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
+                  style={{ background: "#F0FDF4", color: "#16a34a", borderRadius: "8px" }}
+                  onClick={() => openDetail(s)}
+                >
+                  <Icon icon="mdi:eye-outline" width="16" />
+                  Detail
+                </button>
 
                 {!isCancelled && (
                   <button
@@ -630,6 +655,181 @@ const SessionsList = ({ viewAll }) => {
                   </button>
                   <button className="lms-btn-primary" onClick={saveStatus} disabled={saving}>
                     {saving ? <LmsLoader variant="button" label="Saving..." /> : "Save Status"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ══════════════ SESSION DETAIL MODAL ══════════════ */}
+      {detailSession && (
+        <>
+          <div
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 1040 }}
+            onClick={() => setDetailSession(null)}
+          />
+          <div className="modal fade show" style={{ display: "block", zIndex: 1050, overflowY: "auto" }}>
+            <div className="modal-dialog modal-dialog-centered modal-lg">
+              <div className="modal-content" style={{ borderRadius: 16, border: "none", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
+
+                {/* Header */}
+                <div
+                  className="modal-header"
+                  style={{ background: "linear-gradient(90deg,#1d4ed8,#2563eb)", borderRadius: "16px 16px 0 0", border: "none" }}
+                >
+                  <div>
+                    <h5 className="modal-title fw-bold mb-1" style={{ color: "#fff", fontSize: 18 }}>
+                      {detailSession.title || courseDisplayName(detailSession.course) || "Session Detail"}
+                    </h5>
+                    <small style={{ color: "#93c5fd", fontSize: 12 }}>
+                      {detailSession.type || "Regular Class"} · {detailSession.duration || "60 mins"}
+                    </small>
+                  </div>
+                  <button
+                    className="btn-close btn-close-white"
+                    onClick={() => setDetailSession(null)}
+                  />
+                </div>
+
+                <div className="modal-body p-4">
+                  {detailSession._loading || detailLoading ? (
+                    <div className="text-center py-5">
+                      <div className="spinner-border text-primary" />
+                      <p className="mt-3 text-muted">Loading attendance data…</p>
+                    </div>
+                  ) : detailSession._error ? (
+                    <div className="alert alert-danger">{detailSession._error}</div>
+                  ) : (
+                    <>
+                      {/* ── Basic Info ── */}
+                      <div className="row g-3 mb-4">
+                        {[
+                          { label: "Course", value: detailSession.course?.title || courseDisplayName(detailSession.course) || "—" },
+                          { label: "Instructor (Host)", value: detailSession.instructor?.name || getTeacherName(detailSession.instructor) || "—" },
+                          { label: "Date", value: detailSession.startTime ? new Date(detailSession.startTime).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—" },
+                          { label: "Scheduled Time", value: detailSession.startTime ? new Date(detailSession.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—" },
+                          { label: "Duration", value: detailSession.duration || "60 mins" },
+                          { label: "Status", value: detailSession.status || "Scheduled" },
+                        ].map(({ label, value }) => (
+                          <div className="col-6 col-md-4" key={label}>
+                            <div className="p-3 rounded-3" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                              <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
+                              <div className="fw-bold mt-1" style={{ fontSize: 14 }}>{value}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* ── Teacher Attendance ── */}
+                      <h6 className="fw-bold mb-3 d-flex align-items-center gap-2">
+                        <Icon icon="mdi:account-tie" width={18} color="#2563eb" />
+                        Teacher Attendance
+                      </h6>
+                      <div
+                        className="p-3 rounded-3 mb-4"
+                        style={{ background: "linear-gradient(135deg,#eff6ff,#dbeafe)", border: "1px solid #bfdbfe" }}
+                      >
+                        {detailSession.teacherAttendance?.checkInTime ? (
+                          <div className="row g-3">
+                            <div className="col-6 col-md-3">
+                              <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Check-In</div>
+                              <div className="fw-bold" style={{ fontSize: 13 }}>
+                                {new Date(detailSession.teacherAttendance.checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                              </div>
+                            </div>
+                            <div className="col-6 col-md-3">
+                              <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Check-Out</div>
+                              <div className="fw-bold" style={{ fontSize: 13 }}>
+                                {detailSession.teacherAttendance.checkOutTime
+                                  ? new Date(detailSession.teacherAttendance.checkOutTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                  : <span className="badge bg-success">Still in Class</span>}
+                              </div>
+                            </div>
+                            <div className="col-6 col-md-3">
+                              <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Duration</div>
+                              <div className="fw-bold" style={{ fontSize: 13 }}>{detailSession.teacherDuration || "—"}</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted fst-italic">Teacher has not checked in yet.</span>
+                        )}
+                      </div>
+
+                      {/* ── Student Attendance ── */}
+                      <h6 className="fw-bold mb-3 d-flex align-items-center gap-2">
+                        <Icon icon="mdi:account-group" width={18} color="#16a34a" />
+                        Student Attendance
+                        <span className="badge bg-success ms-1">
+                          {detailSession.presentCount || 0} / {detailSession.totalStudents || (detailSession.studentAttendance?.length || 0)} Present
+                        </span>
+                      </h6>
+
+                      {!detailSession.studentAttendance?.length ? (
+                        <div className="text-center py-4 text-muted fst-italic">
+                          <Icon icon="mdi:account-off-outline" width={32} className="mb-2" />
+                          <p>No students have joined this session yet.</p>
+                        </div>
+                      ) : (
+                        <div className="table-responsive">
+                          <table className="table table-sm table-hover align-middle" style={{ fontSize: 13 }}>
+                            <thead>
+                              <tr style={{ background: "#f1f5f9" }}>
+                                <th className="fw-bold">#</th>
+                                <th className="fw-bold">Student</th>
+                                <th className="fw-bold">Check-In</th>
+                                <th className="fw-bold">Check-Out</th>
+                                <th className="fw-bold">Duration</th>
+                                <th className="fw-bold">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {detailSession.studentAttendance.map((rec, idx) => (
+                                <tr key={rec._id || idx}>
+                                  <td className="text-muted">{idx + 1}</td>
+                                  <td>
+                                    <div className="d-flex align-items-center gap-2">
+                                      <div
+                                        className="rounded-circle d-flex align-items-center justify-content-center"
+                                        style={{ width: 32, height: 32, background: "#eff6ff", flexShrink: 0 }}
+                                      >
+                                        <Icon icon="mdi:account" width={18} color="#2563eb" />
+                                      </div>
+                                      <span className="fw-semibold">{rec.student?.name || "Student"}</span>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    {rec.joinedAt
+                                      ? new Date(rec.joinedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                      : <span className="text-muted">—</span>}
+                                  </td>
+                                  <td>
+                                    {rec.leftAt
+                                      ? new Date(rec.leftAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                      : rec.present
+                                      ? <span className="badge bg-success" style={{ fontSize: 10 }}>Still in Class</span>
+                                      : <span className="text-muted">—</span>}
+                                  </td>
+                                  <td>{rec.duration || (rec.joinedAt && !rec.leftAt ? "Ongoing" : "—")}</td>
+                                  <td>
+                                    {rec.present
+                                      ? <span className="badge bg-success">Present</span>
+                                      : <span className="badge bg-danger">Absent</span>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="modal-footer">
+                  <button className="lms-btn-ghost" onClick={() => setDetailSession(null)}>
+                    Close
                   </button>
                 </div>
               </div>
