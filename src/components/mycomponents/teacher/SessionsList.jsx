@@ -674,21 +674,27 @@ const SessionsList = ({ viewAll }) => {
             <div className="modal-dialog modal-dialog-centered modal-lg">
               <div className="modal-content" style={{ borderRadius: 16, border: "none", boxShadow: "0 24px 64px rgba(0,0,0,0.25)" }}>
 
-                {/* Header */}
+                {/* Header — Gold theme */}
                 <div
                   className="modal-header"
-                  style={{ background: "linear-gradient(90deg,#1d4ed8,#2563eb)", borderRadius: "16px 16px 0 0", border: "none" }}
+                  style={{
+                    background: "linear-gradient(135deg,#FEBA01 0%,#f5a800 100%)",
+                    borderRadius: "16px 16px 0 0",
+                    border: "none",
+                    padding: "20px 24px",
+                  }}
                 >
                   <div>
-                    <h5 className="modal-title fw-bold mb-1" style={{ color: "#fff", fontSize: 18 }}>
+                    <h5 className="modal-title fw-bold mb-1" style={{ color: "#0f172a", fontSize: 18 }}>
                       {detailSession.title || courseDisplayName(detailSession.course) || "Session Detail"}
                     </h5>
-                    <small style={{ color: "#93c5fd", fontSize: 12 }}>
+                    <small style={{ color: "rgba(0,0,0,0.5)", fontSize: 12 }}>
                       {detailSession.type || "Regular Class"} · {detailSession.duration || "60 mins"}
                     </small>
                   </div>
                   <button
-                    className="btn-close btn-close-white"
+                    className="btn-close"
+                    style={{ filter: "brightness(0)" }}
                     onClick={() => setDetailSession(null)}
                   />
                 </div>
@@ -696,7 +702,7 @@ const SessionsList = ({ viewAll }) => {
                 <div className="modal-body p-4">
                   {detailSession._loading || detailLoading ? (
                     <div className="text-center py-5">
-                      <div className="spinner-border text-primary" />
+                      <div className="spinner-border" style={{ color: "#FEBA01" }} />
                       <p className="mt-3 text-muted">Loading attendance data…</p>
                     </div>
                   ) : detailSession._error ? (
@@ -714,9 +720,9 @@ const SessionsList = ({ viewAll }) => {
                           { label: "Status", value: detailSession.status || "Scheduled" },
                         ].map(({ label, value }) => (
                           <div className="col-6 col-md-4" key={label}>
-                            <div className="p-3 rounded-3" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                              <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{label}</div>
-                              <div className="fw-bold mt-1" style={{ fontSize: 14 }}>{value}</div>
+                            <div className="p-3 rounded-3" style={{ background: "#fffdf7", border: "1.5px solid #fde68a" }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, color: "#92400e" }}>{label}</div>
+                              <div className="fw-bold mt-1" style={{ fontSize: 14, color: "#0f172a" }}>{value}</div>
                             </div>
                           </div>
                         ))}
@@ -729,7 +735,7 @@ const SessionsList = ({ viewAll }) => {
                       </h6>
                       <div
                         className="p-3 rounded-3 mb-4"
-                        style={{ background: "linear-gradient(135deg,#eff6ff,#dbeafe)", border: "1px solid #bfdbfe" }}
+                        style={{ background: "linear-gradient(135deg,#fffdf7,#fef9c3)", border: "1.5px solid #fde68a" }}
                       >
                         {detailSession.teacherAttendance?.checkInTime ? (
                           <div className="row g-3">
@@ -759,7 +765,7 @@ const SessionsList = ({ viewAll }) => {
 
                       {/* ── Student Attendance ── */}
                       <h6 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                        <Icon icon="mdi:account-group" width={18} color="#16a34a" />
+                        <Icon icon="mdi:account-group" width={18} color="#FEBA01" />
                         Student Attendance
                         <span className="badge bg-success ms-1">
                           {detailSession.presentCount || 0} / {detailSession.totalStudents || (detailSession.studentAttendance?.length || 0)} Present
