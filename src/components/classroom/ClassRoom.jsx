@@ -17,7 +17,6 @@ const ClassRoom = ({
   const [error, setError] = useState("");
   const [sessionDetails, setSessionDetails] = useState(null);
   const [googleMeetLink, setGoogleMeetLink] = useState("");
-  const [teacherCheckedIn, setTeacherCheckedIn] = useState(false);
 
   const role = (roleProp || localStorage.getItem("role") || "").toLowerCase();
   const isTeacher = role === "teacher";
@@ -74,7 +73,6 @@ const ClassRoom = ({
 
       setGoogleMeetLink(nextUrl);
       setSessionDetails(res.data?.session);
-      setTeacherCheckedIn(res.data?.teacherCheckedIn);
       setStatus("connected");
     } catch (err) {
       console.error("Join Classroom Error:", err);
@@ -97,6 +95,7 @@ const ClassRoom = ({
     if (sessionId) {
       joinClassroom();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   const handleLaunchMeet = () => {
