@@ -265,6 +265,7 @@ const StudentTable = () => {
                   <th>Student</th>
                   <th>Email</th>
                   <th>Enrolled Courses</th>
+                  <th>Assigned Teachers</th>
                   <th>Action</th>
                 </tr>
               </thead>
@@ -329,7 +330,35 @@ const StudentTable = () => {
                           })}
                         </div>
                       ) : (
-                        <span className="text-muted text-xs">No Course Enrolled</span>
+                        <span className="text-muted">N/A</span>
+                      )}
+                    </td>
+                    <td>
+                      {s.assignedTeachers?.length ? (
+                        <div className="d-flex flex-wrap gap-1 align-items-start">
+                          {s.assignedTeachers.map((t, idx) => (
+                            <span
+                              key={idx}
+                              className="badge"
+                              style={{
+                                background: "rgba(14, 165, 233, 0.15)",
+                                color: "#0284c7",
+                                whiteSpace: "normal",
+                                textAlign: "left",
+                                lineHeight: 1.35,
+                                maxWidth: 200,
+                                padding: "5px 8px",
+                                borderRadius: 6,
+                              }}
+                            >
+                              {typeof t === "object" ? t.name || t.fullName || "Teacher" : "Teacher"}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted" style={{ fontSize: "12px" }}>
+                          No Teachers Assigned
+                        </span>
                       )}
                     </td>
                     <td>
@@ -513,6 +542,31 @@ const StudentTable = () => {
                             })
                           ) : (
                             <span className="text-muted">N/A</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-3">
+                        <strong>Assigned Teachers:</strong>
+                        <div className="d-flex flex-wrap gap-2 mt-2">
+                          {(selectedStudent.assignedTeachers || []).length ? (
+                            selectedStudent.assignedTeachers.map((t, idx) => (
+                              <span
+                                key={idx}
+                                className="badge"
+                                style={{
+                                  background: "rgba(14, 165, 233, 0.15)",
+                                  color: "#0284c7",
+                                  whiteSpace: "normal",
+                                  padding: "6px 10px",
+                                  borderRadius: 8,
+                                }}
+                              >
+                                {typeof t === "object" ? t.name || t.fullName || "Teacher" : "Teacher"}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-muted">No teachers assigned</span>
                           )}
                         </div>
                       </div>

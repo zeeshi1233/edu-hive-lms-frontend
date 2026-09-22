@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import FormPageHeader from "../../components/common/FormPageHeader";
 import SearchableSelect from "../../components/common/SearchableSelect";
-import { extractList, getCourseId, toCourseSelectOptions } from "../../utils/lmsData";
+import { extractList, getCourseId, getTeacherName, toCourseSelectOptions } from "../../utils/lmsData";
 import LmsLoader from "../../components/common/LmsLoader";
 import notify from "../../utils/notify";
 
@@ -22,7 +22,9 @@ const AddStudent = () => {
   );
   const [loading, setLoading] = useState(false);
   const [fetchingCourses, setFetchingCourses] = useState(true);
+  const [fetchingTeachers, setFetchingTeachers] = useState(true);
   const [courses, setCourses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -46,6 +48,10 @@ const AddStudent = () => {
     .map((c) => getCourseId(c.course || c) || c.courseId || c._id)
     .filter(Boolean);
 
+  const assignedTeacherIds = (editStudent?.assignedTeachers || [])
+    .map((t) => (typeof t === "object" ? t._id || t.id : t))
+    .filter(Boolean);
+
   const initialValues = {
     name: editStudent?.name || "",
     email: editStudent?.email || "",
@@ -59,6 +65,7 @@ const AddStudent = () => {
     guardianName: editStudent?.guardianName || "",
     guardianPhone: editStudent?.guardianPhone || "",
     enrolledCourses: enrolledIds,
+    assignedTeachers: assignedTeacherIds,
     profileImage: null,
     admissionDate: editStudent?.admissionDate
       ? String(editStudent.admissionDate).split("T")[0]
@@ -81,6 +88,7 @@ const AddStudent = () => {
       .matches(/^\d+$/, "Numbers only")
       .max(11, "Max 11 digits"),
     enrolledCourses: Yup.array().min(1, "Select at least one course").required("Course is required"),
+    assignedTeachers: Yup.array().of(Yup.string()).nullable().notRequired(),
     admissionDate: Yup.date().required("Admission date is required"),
     // Edit: keep existing photo — new upload optional
     profileImage: Yup.mixed().nullable().notRequired(),
@@ -122,23 +130,33 @@ const AddStudent = () => {
   const rowStyle = { display: "flex", flexWrap: "wrap", gap: "20px" };
   const colStyle = { flex: "1 1 45%", minWidth: "250px" };
 
-  const getCourses = async () => {
+  const loadDropdowns = async () => {
     try {
       setFetchingCourses(true);
-      const res = await axiosInstance.get("/api/admin/courses");
-      setCourses(extractList(res, ["courses", "data"]));
+      setFetchingTeachers(true);
+      const [courseRes, teacherRes] = await Promise.all([
+        axiosInstance.get("/api/admin/courses"),
+        axiosInstance.get("/api/admin/teachers"),
+      ]);
+      setCourses(extractList(courseRes, ["courses", "data"]));
+      setTeachers(extractList(teacherRes, ["teachers", "data"]));
     } catch (error) {
-      console.error("Failed to load courses", error);
+      console.error("Failed to load courses or teachers", error);
     } finally {
       setFetchingCourses(false);
+      setFetchingTeachers(false);
     }
   };
 
   useEffect(() => {
-    getCourses();
+    loadDropdowns();
   }, []);
 
   const courseOptions = toCourseSelectOptions(courses);
+  const teacherOptions = teachers.map((teacher) => ({
+    value: String(teacher._id || teacher.id),
+    label: `${getTeacherName(teacher)}${teacher.email ? ` (${teacher.email})` : ""}`,
+  }));
 
   const onSubmit = async (values, { resetForm }) => {
     const formData = new FormData();
@@ -160,6 +178,12 @@ const AddStudent = () => {
       if (key === "enrolledCourses") {
         (values.enrolledCourses || []).forEach((courseId) => {
           formData.append("enrolledCourses", courseId);
+        });
+        return;
+      }
+      if (key === "assignedTeachers") {
+        (values.assignedTeachers || []).forEach((teacherId) => {
+          formData.append("assignedTeachers", teacherId);
         });
         return;
       }
@@ -341,6 +365,30 @@ const AddStudent = () => {
                   placeholder="Search and select courses"
                 />
                 <ErrorMessage name="enrolledCourses" component="div" style={errorStyle} />
+              </div>
+
+              <div style={colStyle}>
+                <label style={labelStyle}>Assigned Teachers</label>
+                <SearchableSelect
+                  isMulti
+                  isDark={isDark}
+                  options={teacherOptions}
+                  value={teacherOptions.filter((option) =>
+                    (values.assignedTeachers || []).includes(option.value)
+                  )}
+                  onChange={(selectedOptions) => {
+                    setFieldValue(
+                      "assignedTeachers",
+                      selectedOptions ? selectedOptions.map((option) => option.value) : []
+                    );
+                  }}
+                  placeholder={
+                    fetchingTeachers
+                      ? "Loading teachers..."
+                      : "Search and select teachers to assign..."
+                  }
+                />
+                <ErrorMessage name="assignedTeachers" component="div" style={errorStyle} />
               </div>
 
               <div style={colStyle}>

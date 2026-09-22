@@ -118,19 +118,44 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
 
   /* ── join / get meet link ── */
   const joinClassroom = useCallback(async () => {
-    setStatus("connecting"); setError(""); leavingRef.current = false;
+    setStatus("connecting");
+    setError("");
+    leavingRef.current = false;
     try {
-      const res  = await axiosInstance.post("/api/classroom/join", { participantName: displayName, sessionId });
-      const link = res.data?.googleMeetLink;
-      if (!link) throw new Error("Google Meet link not found. Please contact admin.");
+      const res = await axiosInstance.post("/api/classroom/join", {
+        participantName: displayName,
+        sessionId,
+      });
+      const link =
+        res.data?.googleMeetLink ||
+        res.data?.session?.googleMeetLink ||
+        res.data?.session?.link ||
+        res.data?.session?.meetingLink;
+      if (!link) throw new Error("Video room link not found. Please contact admin.");
       setMeetLink(link);
       setSession(res.data?.session);
       setStatus("connected");
     } catch (err) {
-      const code = err.response?.data?.code;
-      const msg  = err.response?.data?.message || err.message || "Failed to join.";
-      if (code === "WAITING_FOR_TEACHER") { setStatus("waiting"); setError("The instructor hasn't started yet. Please wait..."); }
-      else { setStatus("error"); setError(msg); }
+      const msg = err.response?.data?.message || err.message || "Failed to join.";
+
+      // If waiting code was returned by legacy cache, bypass directly to session details
+      try {
+        const fallbackRes = await axiosInstance.get(`/api/classroom/${sessionId}`);
+        const fallbackLink =
+          fallbackRes.data?.googleMeetLink ||
+          fallbackRes.data?.session?.googleMeetLink ||
+          fallbackRes.data?.session?.link ||
+          fallbackRes.data?.session?.meetingLink;
+        if (fallbackLink) {
+          setMeetLink(fallbackLink);
+          setSession(fallbackRes.data?.session);
+          setStatus("connected");
+          return;
+        }
+      } catch (_) {}
+
+      setStatus("error");
+      setError(msg);
     }
   }, [sessionId, displayName]);
 
@@ -139,32 +164,67 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  /* ══════════════════════════════════ LOADING / WAITING ══════════════════ */
-  if (status === "connecting" || status === "waiting") {
+  /* ══════════════════════════════════ CONNECTING / PREPARING ROOM ══════════════════ */
+  if (status === "connecting") {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg,#fffdf7 0%,#f6f7fb 100%)", padding: 24, textAlign: "center" }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(160deg,#fffdf7 0%,#f6f7fb 100%)",
+          padding: 24,
+          textAlign: "center",
+        }}
+      >
         {/* Spinning gold ring */}
         <div style={{ position: "relative", width: 88, height: 88, marginBottom: 24 }}>
-          <div style={{ position: "absolute", inset: 0, borderRadius: "50%", border: `3px solid ${T.goldSoft2}`, borderTop: `3px solid ${T.gold}`, animation: "spin 1s linear infinite" }} />
-          <div style={{ position: "absolute", inset: 10, borderRadius: "50%", background: T.goldSoft, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              border: `3px solid ${T.goldSoft2}`,
+              borderTop: `3px solid ${T.gold}`,
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 10,
+              borderRadius: "50%",
+              background: T.goldSoft,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <Icon icon="simple-icons:googlemeet" width={28} color={T.gold} />
           </div>
         </div>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
         <h2 style={{ fontSize: 22, fontWeight: 800, color: T.text, marginBottom: 8 }}>
-          {status === "waiting" ? "Waiting for Instructor…" : "Verifying Access…"}
+          Connecting to Video Room…
         </h2>
         <p style={{ color: T.muted, maxWidth: 340, lineHeight: 1.7, fontSize: 14 }}>
-          {status === "waiting" ? error || "Your enrollment is confirmed. Waiting for the teacher." : "Checking enrollment and preparing your classroom…"}
+          Preparing your live classroom interface and connecting your session…
         </p>
 
-        {status === "waiting" && (
-          <button onClick={joinClassroom} style={{ marginTop: 24, padding: "11px 32px", borderRadius: 12, border: "none", background: T.gold, color: T.black, fontWeight: 700, fontSize: 14, cursor: "pointer", boxShadow: `0 4px 20px ${T.goldSoft2}` }}>
-            Retry
-          </button>
-        )}
-        <button onClick={goBack} style={{ marginTop: 12, background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 14 }}>
+        <button
+          onClick={goBack}
+          style={{
+            marginTop: 16,
+            background: "none",
+            border: "none",
+            color: T.muted,
+            cursor: "pointer",
+            fontSize: 14,
+          }}
+        >
           ← Go Back
         </button>
       </div>

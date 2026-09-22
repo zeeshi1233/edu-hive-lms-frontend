@@ -111,7 +111,10 @@ const SessionCreate = () => {
       const payload = {
         title: values.title,
         courseId: values.courseId,
+        course: values.courseId,
         teacherId: values.teacherId,
+        teacher: values.teacherId,
+        instructor: values.teacherId,
         topic: values.topic,
         startTime,
         clientOffset: new Date().getTimezoneOffset(),

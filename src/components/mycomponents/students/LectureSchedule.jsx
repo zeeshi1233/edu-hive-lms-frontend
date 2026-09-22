@@ -26,7 +26,12 @@ const LectureSchedule = () => {
         title: s.title,
         subject: s.course?.title ?? "N/A",
         code: s.course?._id?.slice(-5) ?? "----",
-        teacher: s.instructor?.name ?? "TBA",
+        teacher: s.teacher?.name ?? s.instructor?.name ?? "TBA",
+        hasTeacher: Boolean(
+          (s.teacher?.name || s.instructor?.name) &&
+          (s.teacher?.name !== "TBA" && s.instructor?.name !== "TBA") &&
+          (s.teacherId || s.teacher?._id || s.instructor?._id)
+        ),
         time: `${new Date(s.startTime).toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -125,11 +130,11 @@ const LectureSchedule = () => {
                         </span>
                       </td>
                       <td className="text-center">
-                        {lec._id ? (
+                        {lec.hasTeacher && lec._id ? (
                           <button
                             type="button"
                             className="btn btn-sm"
-                            style={{ background: "#FEBA01", color: "#000" }}
+                            style={{ background: "#FEBA01", color: "#000", fontWeight: "600" }}
                             disabled={joiningId === lec._id}
                             onClick={() => {
                               setJoiningId(lec._id);
@@ -148,7 +153,17 @@ const LectureSchedule = () => {
                             )}
                           </button>
                         ) : (
-                          <span style={{ color: "#888" }}>N/A</span>
+                          <span
+                            className="badge text-muted"
+                            style={{
+                              background: isDark ? "#334155" : "#F1F5F9",
+                              fontSize: "12px",
+                              padding: "6px 10px",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            No Teacher Assigned
+                          </span>
                         )}
                       </td>
                     </tr>

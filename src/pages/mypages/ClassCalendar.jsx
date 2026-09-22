@@ -286,7 +286,10 @@ export default function ClassCalendar() {
       const payload = {
         title: newSession.title,
         courseId: newSession.courseId,
+        course: newSession.courseId,
         teacherId: newSession.teacherId,
+        teacher: newSession.teacherId,
+        instructor: newSession.teacherId,
         topic: newSession.title,
         startTime,
         clientOffset,
@@ -761,25 +764,39 @@ export default function ClassCalendar() {
                             >
                               <Icon icon="solar:eye-bold" width="16" /> View
                             </button>
-                            <button
-                              onClick={() => joinClass(sess)}
-                              disabled={joiningId === getSessionId(sess)}
-                              className="btn btn-sm d-flex align-items-center gap-1"
-                              style={{
-                                background: "#FEBA01",
-                                color: "#000",
-                                borderRadius: "8px",
-                                fontWeight: "600",
-                              }}
-                            >
-                              {joiningId === getSessionId(sess) ? (
-                                <LmsLoader variant="button" label="Joining..." />
-                              ) : (
-                                <>
-                                  <Icon icon="solar:videocamera-record-bold" width="16" /> Join Class
-                                </>
-                              )}
-                            </button>
+                            {role === "student" && (!sess.instructor || sess.instructor === "TBA" || !sess.teacherId) ? (
+                              <span
+                                className="badge text-muted d-flex align-items-center"
+                                style={{
+                                  background: isDark ? "#334155" : "#F1F5F9",
+                                  fontSize: "11px",
+                                  borderRadius: "8px",
+                                  padding: "6px 8px",
+                                }}
+                              >
+                                No Teacher Assigned
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => joinClass(sess)}
+                                disabled={joiningId === getSessionId(sess)}
+                                className="btn btn-sm d-flex align-items-center gap-1"
+                                style={{
+                                  background: "#FEBA01",
+                                  color: "#000",
+                                  borderRadius: "8px",
+                                  fontWeight: "600",
+                                }}
+                              >
+                                {joiningId === getSessionId(sess) ? (
+                                  <LmsLoader variant="button" label="Joining..." />
+                                ) : (
+                                  <>
+                                    <Icon icon="solar:videocamera-record-bold" width="16" /> Join Class
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -946,40 +963,56 @@ export default function ClassCalendar() {
                   </div>
 
                   {/* Join Live Classroom */}
-                  <div
-                    className="p-3 rounded-12 d-flex flex-wrap align-items-center justify-content-between gap-3"
-                    style={{
-                      background: "linear-gradient(135deg, #FEBA01, #F59E0B)",
-                      color: "#111",
-                    }}
-                  >
-                    <div className="d-flex align-items-center gap-3">
-                      <Icon icon="solar:videocamera-record-bold" width="32" />
-                      <div>
-                        <h6 className="mb-0 fw-bold">
-                          Virtual Classroom
-                        </h6>
-                        <small style={{ opacity: 0.85 }}>
-                          Join the EduHive classroom when the instructor starts the class
-                        </small>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-dark fw-bold"
-                      style={{ borderRadius: "8px" }}
-                      disabled={joiningId === getSessionId(selectedSession)}
-                      onClick={() => joinClass(selectedSession)}
+                  {role === "student" && (!selectedSession.instructor || selectedSession.instructor === "TBA" || !selectedSession.teacherId) ? (
+                    <div
+                      className="p-3 rounded-12 d-flex align-items-center gap-2"
+                      style={{
+                        background: isDark ? "#334155" : "#F1F5F9",
+                        color: textColor,
+                        borderRadius: "12px",
+                      }}
                     >
-                      {joiningId === getSessionId(selectedSession) ? (
-                        <LmsLoader variant="button" label="Joining..." />
-                      ) : (
-                        <>
-                          Join Class <Icon icon="solar:videocamera-record-bold" />
-                        </>
-                      )}
-                    </button>
-                  </div>
+                      <Icon icon="solar:info-circle-bold" width="20" style={{ color: "#EAB308" }} />
+                      <span style={{ fontSize: "13px" }}>
+                        No teacher is assigned to this session yet. Virtual classroom link will be accessible once a teacher is assigned.
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className="p-3 rounded-12 d-flex flex-wrap align-items-center justify-content-between gap-3"
+                      style={{
+                        background: "linear-gradient(135deg, #FEBA01, #F59E0B)",
+                        color: "#111",
+                      }}
+                    >
+                      <div className="d-flex align-items-center gap-3">
+                        <Icon icon="solar:videocamera-record-bold" width="32" />
+                        <div>
+                          <h6 className="mb-0 fw-bold">
+                            Virtual Classroom
+                          </h6>
+                          <small style={{ opacity: 0.85 }}>
+                            Join the EduHive classroom when the instructor starts the class
+                          </small>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-dark fw-bold"
+                        style={{ borderRadius: "8px" }}
+                        disabled={joiningId === getSessionId(selectedSession)}
+                        onClick={() => joinClass(selectedSession)}
+                      >
+                        {joiningId === getSessionId(selectedSession) ? (
+                          <LmsLoader variant="button" label="Joining..." />
+                        ) : (
+                          <>
+                            Join Class <Icon icon="solar:videocamera-record-bold" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Modal Footer */}

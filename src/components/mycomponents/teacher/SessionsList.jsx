@@ -490,30 +490,44 @@ const SessionsList = ({ viewAll }) => {
                 </button>
 
                 {!isCancelled && (
-                  <button
-                    type="button"
-                    className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
-                    style={{ background: "#FEBA01", color: "#000", borderRadius: "8px" }}
-                    disabled={joiningId === s._id}
-                    onClick={() => {
-                      setJoiningId(s._id);
-                      navigate(getClassroomPath(s), {
-                        state: {
-                          roomName: s.roomName || "",
-                          classTitle: s.title || courseLabel,
-                        },
-                      });
-                    }}
-                  >
-                    {joiningId === s._id ? (
-                      <LmsLoader variant="button" label="Joining..." />
-                    ) : (
-                      <>
-                        <Icon icon="solar:videocamera-record-bold" width="16" />
-                        Join Class
-                      </>
-                    )}
-                  </button>
+                  role === "student" && (!s.teacher && !s.instructor && !s.teacherId) ? (
+                    <span
+                      className="badge text-muted d-flex align-items-center"
+                      style={{
+                        background: "#F1F5F9",
+                        fontSize: "12px",
+                        padding: "6px 10px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      No Teacher Assigned
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
+                      style={{ background: "#FEBA01", color: "#000", borderRadius: "8px" }}
+                      disabled={joiningId === s._id}
+                      onClick={() => {
+                        setJoiningId(s._id);
+                        navigate(getClassroomPath(s), {
+                          state: {
+                            roomName: s.roomName || "",
+                            classTitle: s.title || courseLabel,
+                          },
+                        });
+                      }}
+                    >
+                      {joiningId === s._id ? (
+                        <LmsLoader variant="button" label="Joining..." />
+                      ) : (
+                        <>
+                          <Icon icon="solar:videocamera-record-bold" width="16" />
+                          Join Class
+                        </>
+                      )}
+                    </button>
+                  )
                 )}
 
                 {!viewAll && canEditStatus && (
