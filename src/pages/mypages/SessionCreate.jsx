@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axiosInstance from "../../api/axiosInstance";
@@ -17,11 +17,13 @@ const SessionCreate = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [fetchingTeachers, setFetchingTeachers] = useState(false);
   const [isDark, setIsDark] = useState(
     document.documentElement.getAttribute("data-theme") === "dark"
   );
   const [courses, setCourses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
+  // filteredTeachers holds only teachers assigned to the selected course
+  const [filteredTeachers, setFilteredTeachers] = useState([]);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -52,6 +54,12 @@ const SessionCreate = () => {
     fontSize: "14px",
     color: isDark ? "#E2E8F0" : "#111",
   };
+  const hintStyle = {
+    fontSize: "12px",
+    color: isDark ? "#64748B" : "#94A3B8",
+    marginTop: "4px",
+    display: "block",
+  };
   const errorStyle = { color: "#EF4444", fontSize: "12px", marginBottom: "10px" };
   const rowStyle = { display: "flex", flexWrap: "wrap", gap: "16px" };
 
@@ -67,24 +75,21 @@ const SessionCreate = () => {
   const validationSchema = Yup.object({
     title: Yup.string().required("Session title is required"),
     courseId: Yup.string().required("Course is required"),
-    teacherId: Yup.string().required("Teacher is required"),
+    teacherId: Yup.string().required("Instructor is required"),
     topic: Yup.string().required("Topic is required"),
     startTime: Yup.date().required("Start time is required"),
     type: Yup.string().required("Class type is required"),
   });
 
+  // Load all courses on mount
   useEffect(() => {
     const load = async () => {
       try {
         setFetching(true);
-        const [courseRes, teacherRes] = await Promise.all([
-          axiosInstance.get("/api/admin/courses"),
-          axiosInstance.get("/api/admin/teachers"),
-        ]);
+        const courseRes = await axiosInstance.get("/api/admin/courses");
         setCourses(extractList(courseRes, ["courses", "data"]));
-        setTeachers(extractList(teacherRes, ["teachers", "data"]));
       } catch (error) {
-        console.error("Failed to fetch session form data", error);
+        console.error("Failed to fetch courses", error);
       } finally {
         setFetching(false);
       }
@@ -92,9 +97,33 @@ const SessionCreate = () => {
     load();
   }, []);
 
+  // When a course is selected, fetch only teachers assigned to that course
+  const loadTeachersForCourse = useCallback(async (courseId, setFieldValue) => {
+    if (!courseId) {
+      setFilteredTeachers([]);
+      setFieldValue("teacherId", "");
+      return;
+    }
+    try {
+      setFetchingTeachers(true);
+      setFieldValue("teacherId", ""); // reset teacher selection on course change
+      const res = await axiosInstance.get(`/api/admin/courses/${courseId}/teachers`);
+      const teachers = extractList(res, ["teachers", "data"]);
+      setFilteredTeachers(teachers);
+      if (!teachers.length) {
+        notify.warning("No instructors are assigned to this course yet. Please assign teachers first.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch teachers for course", error);
+      setFilteredTeachers([]);
+    } finally {
+      setFetchingTeachers(false);
+    }
+  }, []);
+
   const courseOptions = toCourseSelectOptions(courses);
-  const teacherOptions = teachers.map((teacher) => ({
-    value: teacher._id || teacher.id,
+  const teacherOptions = filteredTeachers.map((teacher) => ({
+    value: String(teacher._id || teacher.id),
     label: getTeacherName(teacher),
   }));
 
@@ -167,18 +196,24 @@ const SessionCreate = () => {
                 <ErrorMessage name="topic" component="div" style={errorStyle} />
               </div>
 
+              {/* Course dropdown — must be selected before teacher */}
               <div style={colStyle}>
                 <label style={labelStyle}>Course *</label>
                 <SearchableSelect
                   isDark={isDark}
                   options={courseOptions}
                   value={courseOptions.find((option) => option.value === values.courseId) || null}
-                  onChange={(option) => setFieldValue("courseId", option?.value || "")}
-                  placeholder="Search courses"
+                  onChange={(option) => {
+                    const newCourseId = option?.value || "";
+                    setFieldValue("courseId", newCourseId);
+                    loadTeachersForCourse(newCourseId, setFieldValue);
+                  }}
+                  placeholder="Search and select a course"
                 />
                 <ErrorMessage name="courseId" component="div" style={errorStyle} />
               </div>
 
+              {/* Teacher dropdown — filtered by selected course */}
               <div style={colStyle}>
                 <label style={labelStyle}>Instructor *</label>
                 <SearchableSelect
@@ -186,8 +221,25 @@ const SessionCreate = () => {
                   options={teacherOptions}
                   value={teacherOptions.find((option) => option.value === values.teacherId) || null}
                   onChange={(option) => setFieldValue("teacherId", option?.value || "")}
-                  placeholder="Search instructors"
+                  placeholder={
+                    !values.courseId
+                      ? "Select a course first"
+                      : fetchingTeachers
+                      ? "Loading instructors..."
+                      : teacherOptions.length === 0
+                      ? "No instructors assigned to this course"
+                      : "Select an instructor"
+                  }
+                  isDisabled={!values.courseId || fetchingTeachers}
                 />
+                {values.courseId && !fetchingTeachers && teacherOptions.length === 0 && (
+                  <span style={{ ...hintStyle, color: "#F59E0B" }}>
+                    ⚠ No instructors are assigned to this course. Go to Teachers &gt; Assign Course.
+                  </span>
+                )}
+                {!values.courseId && (
+                  <span style={hintStyle}>Please select a course to see available instructors.</span>
+                )}
                 <ErrorMessage name="teacherId" component="div" style={errorStyle} />
               </div>
 
@@ -214,7 +266,11 @@ const SessionCreate = () => {
                 >
                   Close
                 </button>
-                <button type="submit" className="lms-btn-primary" disabled={loading || fetching}>
+                <button
+                  type="submit"
+                  className="lms-btn-primary"
+                  disabled={loading || fetching || fetchingTeachers}
+                >
                   {loading ? <LmsLoader variant="button" label="Creating..." /> : "Create Session"}
                 </button>
               </div>

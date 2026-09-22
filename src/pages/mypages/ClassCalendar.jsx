@@ -60,6 +60,9 @@ export default function ClassCalendar() {
 
   const [courses, setCourses] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  // Teachers filtered by the course selected in the "Schedule Session" modal
+  const [filteredCalTeachers, setFilteredCalTeachers] = useState([]);
+  const [fetchingCalTeachers, setFetchingCalTeachers] = useState(false);
 
   const getTodayLocalStr = () => {
     const d = new Date();
@@ -111,12 +114,8 @@ export default function ClassCalendar() {
           console.error("Failed to fetch calendar courses", courseError);
         }
 
-        try {
-          const teacherRes = await axiosInstance.get("/api/admin/teachers");
-          setTeachers(extractList(teacherRes, ["teachers", "data"]));
-        } catch (teacherError) {
-          console.error("Failed to fetch calendar instructors", teacherError);
-        }
+        // Teachers will be loaded on-demand when a course is selected in the modal
+        // No need to pre-load all teachers globally
       } else if (role === "teacher") {
         try {
           const courseRes = await axiosInstance.get("/api/teacher/courses");
@@ -1133,13 +1132,32 @@ export default function ClassCalendar() {
                               (option) => option.value === newSession.courseId
                             ) || null
                           }
-                          onChange={(option) =>
+                          onChange={async (option) => {
+                            const selectedCourseId = option?.value || "";
                             setNewSession({
                               ...newSession,
-                              courseId: option?.value || "",
+                              courseId: selectedCourseId,
                               course: option?.label || "",
-                            })
-                          }
+                              teacherId: "",
+                              instructor: "",
+                            });
+                            if (!selectedCourseId) {
+                              setFilteredCalTeachers([]);
+                              return;
+                            }
+                            try {
+                              setFetchingCalTeachers(true);
+                              const tRes = await axiosInstance.get(`/api/admin/courses/${selectedCourseId}/teachers`);
+                              const list = extractList(tRes, ["teachers", "data"]);
+                              setFilteredCalTeachers(list);
+                              if (!list.length) notify.warning("No instructors are assigned to this course yet.");
+                            } catch (e) {
+                              console.error("Failed to load course teachers", e);
+                              setFilteredCalTeachers([]);
+                            } finally {
+                              setFetchingCalTeachers(false);
+                            }
+                          }}
                           placeholder="Search courses"
                         />
                       </div>
@@ -1148,13 +1166,15 @@ export default function ClassCalendar() {
                         <label className="form-label fw-bold mb-2">Instructor Name *</label>
                         <SearchableSelect
                           isDark={isDark}
-                          options={teacherSelectOptions}
+                          options={filteredCalTeachers.map((t) => ({ value: String(t._id || t.id), label: getTeacherName(t) }))}
                           value={
-                            teacherSelectOptions.find(
-                              (option) =>
-                                option.value === newSession.teacherId ||
-                                option.label === newSession.instructor
-                            ) || null
+                            filteredCalTeachers
+                              .map((t) => ({ value: String(t._id || t.id), label: getTeacherName(t) }))
+                              .find(
+                                (option) =>
+                                  option.value === newSession.teacherId ||
+                                  option.label === newSession.instructor
+                              ) || null
                           }
                           onChange={(option) =>
                             setNewSession({
@@ -1163,7 +1183,16 @@ export default function ClassCalendar() {
                               instructor: option?.label || "",
                             })
                           }
-                          placeholder="Search instructors"
+                          placeholder={
+                            !newSession.courseId
+                              ? "Select a course first"
+                              : fetchingCalTeachers
+                              ? "Loading instructors..."
+                              : filteredCalTeachers.length === 0
+                              ? "No instructors for this course"
+                              : "Search instructors"
+                          }
+                          isDisabled={!newSession.courseId || fetchingCalTeachers}
                         />
                       </div>
 
