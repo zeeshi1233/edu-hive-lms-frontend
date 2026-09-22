@@ -59,7 +59,6 @@ export default function ClassCalendar() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   const [courses, setCourses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
   // Teachers filtered by the course selected in the "Schedule Session" modal
   const [filteredCalTeachers, setFilteredCalTeachers] = useState([]);
   const [fetchingCalTeachers, setFetchingCalTeachers] = useState(false);
@@ -205,10 +204,7 @@ export default function ClassCalendar() {
 
   const typeOptions = ["Regular Class", "Extra Class"];
   const courseSelectOptions = toCourseSelectOptions(courses);
-  const teacherSelectOptions = teachers.map((teacher) => ({
-    value: teacher._id || teacher.id,
-    label: getTeacherName(teacher),
-  }));
+
 
   // Filter dropdown: only real courses from API (never session titles like "testing1")
   const courseOptions = courseSelectOptions.map((option) => option.label);
