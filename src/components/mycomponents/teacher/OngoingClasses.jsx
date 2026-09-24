@@ -34,13 +34,29 @@ const OngoingClasses = () => {
   }, []);
 
   const ongoingSessions = sessions.filter((s) => {
+    const rawStatus = String(s.status || "").toLowerCase();
+    if (["conducted", "completed", "not_conducted", "not conducted", "cancelled"].includes(rawStatus)) {
+      return false;
+    }
+    if (s.teacherAttendance?.checkOutTime) {
+      return false;
+    }
     const start = new Date(s.startTime);
+    if (isNaN(start.getTime())) return false;
     const today = new Date();
-    return (
+    const isToday =
       start.getFullYear() === today.getFullYear() &&
       start.getMonth() === today.getMonth() &&
-      start.getDate() === today.getDate()
-    );
+      start.getDate() === today.getDate();
+    if (!isToday) return false;
+
+    const durMins = parseInt(s.duration, 10) || 60;
+    const endMs = s.endTime ? new Date(s.endTime).getTime() : start.getTime() + durMins * 60000;
+    if (Date.now() > endMs && rawStatus !== "ongoing") {
+      return false;
+    }
+
+    return true;
   });
 
   useEffect(() => {
@@ -96,7 +112,9 @@ const OngoingClasses = () => {
                     {formatTime(cls.startTime)} - {formatTime(cls.endTime)}
                   </td>
                   <td>
-                    <span className="badge bg-success px-3 py-2">Live</span>
+                    <span className={`badge ${cls.isLive || String(cls.status || "").toLowerCase() === "ongoing" ? "bg-success" : "bg-warning text-dark"} px-3 py-2`}>
+                      {cls.isLive || String(cls.status || "").toLowerCase() === "ongoing" ? "Live" : "Scheduled"}
+                    </span>
                   </td>
                   <td>
                     <button

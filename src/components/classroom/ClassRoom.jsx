@@ -116,6 +116,40 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
     finally { goBack(); }
   }, [sessionId, goBack]);
 
+  // Reliable checkout on window close, refresh, or component unmount
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (!leavingRef.current && sessionId) {
+        leavingRef.current = true;
+        const token = localStorage.getItem("token");
+        const url = `${axiosInstance.defaults.baseURL || ""}/api/classroom/leave`;
+        try {
+          fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ sessionId }),
+            keepalive: true,
+          });
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handleBeforeUnload);
+      if (!leavingRef.current && sessionId) {
+        leavingRef.current = true;
+        axiosInstance.post("/api/classroom/leave", { sessionId }).catch(() => {});
+      }
+    };
+  }, [sessionId]);
+
   /* ── join / get meet link ── */
   const joinClassroom = useCallback(async () => {
     setStatus("connecting");
@@ -340,6 +374,23 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
               <Icon icon="mdi:crown" width={18} color={T.gold} />
               <span style={{ fontSize: 13, color: T.goldDark, fontWeight: 600 }}>
                 You are the <strong>Host</strong> of this meeting. Your check-in starts the session for students.
+              </span>
+            </div>
+          )}
+
+          {/* Concluded notice */}
+          {(session?.status === "conducted" || session?.status === "completed" || session?.teacherAttendance?.checkOutTime) && (
+            <div style={{
+              background: "#fef2f2",
+              border: "1.5px solid #fecaca",
+              borderRadius: 12,
+              padding: "12px 16px",
+              display: "flex", alignItems: "center", gap: 10,
+              marginBottom: 20,
+            }}>
+              <Icon icon="mdi:information-outline" width={18} color="#ef4444" />
+              <span style={{ fontSize: 13, color: "#991b1b", fontWeight: 600 }}>
+                This session has concluded and checkout has been finalized.
               </span>
             </div>
           )}

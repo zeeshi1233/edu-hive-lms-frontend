@@ -120,6 +120,37 @@ const SessionsList = ({ viewAll }) => {
         })
       : "";
 
+  const isSessionEndedOrExpired = (session) => {
+    if (!session) return false;
+    const raw = String(session.status || "").toLowerCase();
+    if (["conducted", "completed", "not_conducted", "not conducted", "cancelled"].includes(raw)) {
+      return true;
+    }
+    if (session.teacherAttendance?.checkOutTime) {
+      return true;
+    }
+    if (session.startTime) {
+      const startMs = new Date(session.startTime).getTime();
+      if (!isNaN(startMs)) {
+        const durMins = parseInt(session.duration, 10) || 60;
+        const endMs = session.endTime ? new Date(session.endTime).getTime() : startMs + durMins * 60000;
+        if (Date.now() > endMs) return true;
+      }
+    }
+    return false;
+  };
+
+  const formatDurationBetween = (start, end) => {
+    if (!start || !end) return "—";
+    const startMs = new Date(start).getTime();
+    const endMs = new Date(end).getTime();
+    if (isNaN(startMs) || isNaN(endMs) || endMs <= startMs) return "—";
+    const mins = Math.max(1, Math.round((endMs - startMs) / 60000));
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h} hr${h > 1 ? "s" : ""} ${m} mins` : `${m} mins`;
+  };
+
   const courseLabelOf = (s) =>
     courseDisplayName(s.course) || s.courseTitle || s.title || "";
 
@@ -128,7 +159,16 @@ const SessionsList = ({ viewAll }) => {
     if (raw === "conducted" || raw === "completed") return "Conducted";
     if (raw === "not_conducted" || raw === "not conducted") return "Not Conducted";
     if (raw === "cancelled") return "Cancelled";
-    if (raw === "ongoing") return "Ongoing";
+    if (session.teacherAttendance?.checkOutTime) return "Conducted";
+    if (raw === "ongoing") {
+      if (session.startTime) {
+        const startMs = new Date(session.startTime).getTime();
+        const durMins = parseInt(session.duration, 10) || 60;
+        const endMs = session.endTime ? new Date(session.endTime).getTime() : startMs + durMins * 60000;
+        if (Date.now() > endMs) return "Conducted";
+      }
+      return "Ongoing";
+    }
     return "Scheduled";
   };
 
@@ -490,7 +530,19 @@ const SessionsList = ({ viewAll }) => {
                 </button>
 
                 {!isCancelled && (
-                  role === "student" && (!s.teacher && !s.instructor && !s.teacherId) ? (
+                  label === "Conducted" || Boolean(s.teacherAttendance?.checkOutTime) || isSessionEndedOrExpired(s) ? (
+                    <span
+                      className="badge text-muted d-flex align-items-center"
+                      style={{
+                        background: "#F1F5F9",
+                        fontSize: "12px",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      Class Ended
+                    </span>
+                  ) : role === "student" && (!s.teacher && !s.instructor && !s.teacherId) ? (
                     <span
                       className="badge text-muted d-flex align-items-center"
                       style={{
@@ -798,106 +850,147 @@ const SessionsList = ({ viewAll }) => {
                       </div>
 
                       {/* ── Teacher Attendance ── */}
-                      <h6 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                        <Icon icon="mdi:account-tie" width={18} color="#2563eb" />
-                        Teacher Attendance
-                      </h6>
-                      <div
-                        className="p-3 rounded-3 mb-4"
-                        style={{ background: "linear-gradient(135deg,#fffdf7,#fef9c3)", border: "1.5px solid #fde68a" }}
-                      >
-                        {detailSession.teacherAttendance?.checkInTime ? (
-                          <div className="row g-3">
-                            <div className="col-6 col-md-3">
-                              <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Check-In</div>
-                              <div className="fw-bold" style={{ fontSize: 13 }}>
-                                {new Date(detailSession.teacherAttendance.checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                              </div>
-                            </div>
-                            <div className="col-6 col-md-3">
-                              <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Check-Out</div>
-                              <div className="fw-bold" style={{ fontSize: 13 }}>
-                                {detailSession.teacherAttendance.checkOutTime
-                                  ? new Date(detailSession.teacherAttendance.checkOutTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                                  : <span className="badge bg-success">Still in Class</span>}
-                              </div>
-                            </div>
-                            <div className="col-6 col-md-3">
-                              <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Duration</div>
-                              <div className="fw-bold" style={{ fontSize: 13 }}>{detailSession.teacherDuration || "—"}</div>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-muted fst-italic">Teacher has not checked in yet.</span>
-                        )}
-                      </div>
-
-                      {/* ── Student Attendance ── */}
-                      <h6 className="fw-bold mb-3 d-flex align-items-center gap-2">
-                        <Icon icon="mdi:account-group" width={18} color="#FEBA01" />
-                        Student Attendance
-                        <span className="badge bg-success ms-1">
-                          {detailSession.presentCount || 0} / {detailSession.totalStudents || (detailSession.studentAttendance?.length || 0)} Present
-                        </span>
-                      </h6>
-
-                      {!detailSession.studentAttendance?.length ? (
-                        <div className="text-center py-4 text-muted fst-italic">
-                          <Icon icon="mdi:account-off-outline" width={32} className="mb-2" />
-                          <p>No students have joined this session yet.</p>
-                        </div>
-                      ) : (
-                        <div className="table-responsive">
-                          <table className="table table-sm table-hover align-middle" style={{ fontSize: 13 }}>
-                            <thead>
-                              <tr style={{ background: "#f1f5f9" }}>
-                                <th className="fw-bold">#</th>
-                                <th className="fw-bold">Student</th>
-                                <th className="fw-bold">Check-In</th>
-                                <th className="fw-bold">Check-Out</th>
-                                <th className="fw-bold">Duration</th>
-                                <th className="fw-bold">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {detailSession.studentAttendance.map((rec, idx) => (
-                                <tr key={rec._id || idx}>
-                                  <td className="text-muted">{idx + 1}</td>
-                                  <td>
-                                    <div className="d-flex align-items-center gap-2">
-                                      <div
-                                        className="rounded-circle d-flex align-items-center justify-content-center"
-                                        style={{ width: 32, height: 32, background: "#eff6ff", flexShrink: 0 }}
-                                      >
-                                        <Icon icon="mdi:account" width={18} color="#2563eb" />
-                                      </div>
-                                      <span className="fw-semibold">{rec.student?.name || "Student"}</span>
+                      {(() => {
+                        const isEnded = isSessionEndedOrExpired(detailSession);
+                        return (
+                          <>
+                            <h6 className="fw-bold mb-3 d-flex align-items-center gap-2">
+                              <Icon icon="mdi:account-tie" width={18} color="#2563eb" />
+                              Teacher Attendance
+                            </h6>
+                            <div
+                              className="p-3 rounded-3 mb-4"
+                              style={{ background: "linear-gradient(135deg,#fffdf7,#fef9c3)", border: "1.5px solid #fde68a" }}
+                            >
+                              {detailSession.teacherAttendance?.checkInTime ? (
+                                <div className="row g-3">
+                                  <div className="col-6 col-md-3">
+                                    <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Check-In</div>
+                                    <div className="fw-bold" style={{ fontSize: 13 }}>
+                                      {new Date(detailSession.teacherAttendance.checkInTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                     </div>
-                                  </td>
-                                  <td>
-                                    {rec.joinedAt
-                                      ? new Date(rec.joinedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                                      : <span className="text-muted">—</span>}
-                                  </td>
-                                  <td>
-                                    {rec.leftAt
-                                      ? new Date(rec.leftAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                                      : rec.present
-                                      ? <span className="badge bg-success" style={{ fontSize: 10 }}>Still in Class</span>
-                                      : <span className="text-muted">—</span>}
-                                  </td>
-                                  <td>{rec.duration || (rec.joinedAt && !rec.leftAt ? "Ongoing" : "—")}</td>
-                                  <td>
-                                    {rec.present
-                                      ? <span className="badge bg-success">Present</span>
-                                      : <span className="badge bg-danger">Absent</span>}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+                                  </div>
+                                  <div className="col-6 col-md-3">
+                                    <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Check-Out</div>
+                                    <div className="fw-bold" style={{ fontSize: 13 }}>
+                                      {detailSession.teacherAttendance.checkOutTime ? (
+                                        new Date(detailSession.teacherAttendance.checkOutTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                      ) : isEnded ? (
+                                        <span className="badge bg-secondary">Session Ended</span>
+                                      ) : (
+                                        <span className="badge bg-success">Still in Class</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="col-6 col-md-3">
+                                    <div className="text-muted" style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" }}>Duration</div>
+                                    <div className="fw-bold" style={{ fontSize: 13 }}>
+                                      {detailSession.teacherDuration || (isEnded && detailSession.teacherAttendance?.checkInTime ? formatDurationBetween(detailSession.teacherAttendance.checkInTime, detailSession.teacherAttendance?.checkOutTime || detailSession.endTime || (detailSession.startTime ? new Date(new Date(detailSession.startTime).getTime() + (parseInt(detailSession.duration, 10) || 60) * 60000) : null)) : "—")}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-muted fst-italic">Teacher has not checked in yet.</span>
+                              )}
+                            </div>
+
+                            {/* ── Student Attendance ── */}
+                            <h6 className="fw-bold mb-3 d-flex align-items-center gap-2">
+                              <Icon icon="mdi:account-group" width={18} color="#FEBA01" />
+                              Student Attendance
+                              <span className="badge bg-success ms-1">
+                                {detailSession.presentCount || 0} / {detailSession.totalStudents || (detailSession.studentAttendance?.length || 0)} Present
+                              </span>
+                            </h6>
+
+                            {!detailSession.studentAttendance?.length ? (
+                              <div className="text-center py-4 text-muted fst-italic">
+                                <Icon icon="mdi:account-off-outline" width={32} className="mb-2" />
+                                <p>No students have joined this session yet.</p>
+                              </div>
+                            ) : (
+                              <div className="table-responsive">
+                                <table className="table table-sm table-hover align-middle" style={{ fontSize: 13 }}>
+                                  <thead>
+                                    <tr style={{ background: "#f1f5f9" }}>
+                                      <th className="fw-bold">#</th>
+                                      <th className="fw-bold">Student</th>
+                                      <th className="fw-bold">Check-In</th>
+                                      <th className="fw-bold">Check-Out</th>
+                                      <th className="fw-bold">Duration</th>
+                                      <th className="fw-bold">Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {detailSession.studentAttendance.map((rec, idx) => {
+                                      const effectiveStudentLeftAt =
+                                        rec.leftAt ||
+                                        (isEnded ? (detailSession.teacherAttendance?.checkOutTime || detailSession.endTime || (detailSession.startTime ? new Date(new Date(detailSession.startTime).getTime() + (parseInt(detailSession.duration, 10) || 60) * 60000) : null)) : null);
+
+                                      return (
+                                        <tr key={rec._id || idx}>
+                                          <td className="text-muted">{idx + 1}</td>
+                                          <td>
+                                            <div className="d-flex align-items-center gap-2">
+                                              <div
+                                                className="rounded-circle d-flex align-items-center justify-content-center"
+                                                style={{ width: 32, height: 32, background: "#eff6ff", flexShrink: 0 }}
+                                              >
+                                                <Icon icon="mdi:account" width={18} color="#2563eb" />
+                                              </div>
+                                              <span className="fw-semibold">{rec.student?.name || "Student"}</span>
+                                            </div>
+                                          </td>
+                                          <td>
+                                            {rec.joinedAt
+                                              ? new Date(rec.joinedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                              : <span className="text-muted">—</span>}
+                                          </td>
+                                          <td>
+                                            {rec.leftAt ? (
+                                              new Date(rec.leftAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                            ) : rec.present ? (
+                                              isEnded ? (
+                                                detailSession.teacherAttendance?.checkOutTime ? (
+                                                  new Date(detailSession.teacherAttendance.checkOutTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                                ) : detailSession.endTime && !isNaN(new Date(detailSession.endTime).getTime()) ? (
+                                                  new Date(detailSession.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                                ) : (
+                                                  <span className="badge bg-secondary" style={{ fontSize: 10 }}>Session Ended</span>
+                                                )
+                                              ) : (
+                                                <span className="badge bg-success" style={{ fontSize: 10 }}>Still in Class</span>
+                                              )
+                                            ) : (
+                                              <span className="text-muted">—</span>
+                                            )}
+                                          </td>
+                                          <td>
+                                            {rec.duration
+                                              ? rec.duration
+                                              : rec.joinedAt
+                                              ? isEnded
+                                                ? formatDurationBetween(rec.joinedAt, effectiveStudentLeftAt)
+                                                : !rec.leftAt
+                                                ? "Ongoing"
+                                                : "—"
+                                              : "—"}
+                                          </td>
+                                          <td>
+                                            {rec.present
+                                              ? <span className="badge bg-success">Present</span>
+                                              : <span className="badge bg-danger">Absent</span>}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </>
                   )}
                 </div>
