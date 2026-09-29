@@ -16,7 +16,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/" replace state={{ from: location.pathname + location.search }} />;
   }
 
   if (allowedRoles?.length && !allowedRoles.includes(role)) {

@@ -111,7 +111,13 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
     if (leavingRef.current) return;
     leavingRef.current = true;
     try {
-      if (sessionId) await axiosInstance.post("/api/classroom/leave", { sessionId });
+      if (sessionId) {
+        try {
+          await axiosInstance.post(`/api/sessions/${sessionId}/leave`, { sessionId });
+        } catch (_) {
+          await axiosInstance.post("/api/classroom/leave", { sessionId });
+        }
+      }
     } catch (e) { console.error("Leave error", e); }
     finally { goBack(); }
   }, [sessionId, goBack]);
@@ -122,7 +128,8 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
       if (!leavingRef.current && sessionId) {
         leavingRef.current = true;
         const token = localStorage.getItem("token");
-        const url = `${axiosInstance.defaults.baseURL || ""}/api/classroom/leave`;
+        const base = axiosInstance.defaults.baseURL || "";
+        const url = `${base}/api/sessions/${sessionId}/leave`;
         try {
           fetch(url, {
             method: "POST",
@@ -145,7 +152,9 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
       window.removeEventListener("pagehide", handleBeforeUnload);
       if (!leavingRef.current && sessionId) {
         leavingRef.current = true;
-        axiosInstance.post("/api/classroom/leave", { sessionId }).catch(() => {});
+        axiosInstance.post(`/api/sessions/${sessionId}/leave`, { sessionId }).catch(() => {
+          axiosInstance.post("/api/classroom/leave", { sessionId }).catch(() => {});
+        });
       }
     };
   }, [sessionId]);
@@ -156,33 +165,86 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
     setError("");
     leavingRef.current = false;
     try {
-      const res = await axiosInstance.post("/api/classroom/join", {
-        participantName: displayName,
-        sessionId,
-      });
+      let res;
+      try {
+        res = await axiosInstance.post(`/api/sessions/${sessionId}/join`, {
+          participantName: displayName,
+          sessionId,
+        });
+      } catch (postErr) {
+        const isExpired =
+          postErr.response?.data?.code === "SESSION_EXPIRED" ||
+          (postErr.response?.data?.message || "").toLowerCase().includes("expired");
+        if (isExpired) {
+          throw postErr;
+        }
+        res = await axiosInstance.post("/api/classroom/join", {
+          participantName: displayName,
+          sessionId,
+        });
+      }
+
+      const sessionData = res.data?.session;
+
+      // Client-side verification of expiration
+      if (sessionData) {
+        const isExp = sessionData.isExpired || (sessionData.endTime && Date.now() > new Date(sessionData.endTime).getTime());
+        if (isExp) {
+          setStatus("expired");
+          setError("This session has expired.");
+          setSession(sessionData);
+          return;
+        }
+      }
+
       const link =
         res.data?.googleMeetLink ||
-        res.data?.session?.googleMeetLink ||
-        res.data?.session?.link ||
-        res.data?.session?.meetingLink;
+        sessionData?.googleMeetLink ||
+        sessionData?.link ||
+        sessionData?.meetingLink;
       if (!link) throw new Error("Video room link not found. Please contact admin.");
       setMeetLink(link);
-      setSession(res.data?.session);
+      setSession(sessionData);
       setStatus("connected");
     } catch (err) {
+      if (err.response?.status === 401) {
+        navigate("/", { replace: true, state: { from: `/classroom/${sessionId}` } });
+        return;
+      }
+
+      const isExpiredErr =
+        err.response?.data?.code === "SESSION_EXPIRED" ||
+        (err.response?.data?.message || "").toLowerCase().includes("expired");
+
+      if (isExpiredErr) {
+        setStatus("expired");
+        setError("This session has expired.");
+        return;
+      }
+
       const msg = err.response?.data?.message || err.message || "Failed to join.";
 
-      // If waiting code was returned by legacy cache, bypass directly to session details
+      // Fallback check
       try {
         const fallbackRes = await axiosInstance.get(`/api/classroom/${sessionId}`);
+        const fallbackSession = fallbackRes.data?.session;
+        if (fallbackSession) {
+          const isExp = fallbackSession.isExpired || (fallbackSession.endTime && Date.now() > new Date(fallbackSession.endTime).getTime());
+          if (isExp) {
+            setStatus("expired");
+            setError("This session has expired.");
+            setSession(fallbackSession);
+            return;
+          }
+        }
         const fallbackLink =
           fallbackRes.data?.googleMeetLink ||
-          fallbackRes.data?.session?.googleMeetLink ||
-          fallbackRes.data?.session?.link ||
-          fallbackRes.data?.session?.meetingLink;
+          fallbackSession?.googleMeetLink ||
+          fallbackSession?.link ||
+          fallbackSession?.meetingLink;
         if (fallbackLink) {
           setMeetLink(fallbackLink);
-          setSession(fallbackRes.data?.session);
+          setSession(fallbackSession);
           setStatus("connected");
           return;
         }
@@ -191,12 +253,118 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
       setStatus("error");
       setError(msg);
     }
-  }, [sessionId, displayName]);
+  }, [sessionId, displayName, navigate]);
 
   useEffect(() => {
     if (sessionId) joinClassroom();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  /* ══════════════════════════════════ EXPIRED SESSION ══════════════════ */
+  if (status === "expired") {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(160deg,#fffdf7 0%,#fff5f5 100%)",
+          padding: 24,
+          textAlign: "center",
+          fontFamily: "'Inter',system-ui,sans-serif",
+        }}
+      >
+        <div
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: "50%",
+            background: "#fee2e2",
+            border: "2px solid #fca5a5",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 20,
+            boxShadow: "0 10px 30px rgba(239,68,68,0.15)",
+          }}
+        >
+          <Icon icon="solar:clock-circle-bold" width={44} color="#ef4444" />
+        </div>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "4px 14px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 700,
+            background: "#fee2e2",
+            color: "#dc2626",
+            marginBottom: 12,
+            border: "1px solid #fecaca",
+          }}
+        >
+          Meeting Link Deactivated
+        </span>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#1e293b", marginBottom: 8, letterSpacing: "-0.02em" }}>
+          This session has expired.
+        </h2>
+        <p style={{ color: "#64748b", maxWidth: 440, lineHeight: 1.6, fontSize: 14, marginBottom: 24 }}>
+          The scheduled time window for this live class has ended. Meeting links automatically expire after the session end time for security and attendance integrity.
+        </p>
+
+        {session && (
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1.5px solid #e2e8f0",
+              borderRadius: 16,
+              padding: "16px 24px",
+              maxWidth: 420,
+              width: "100%",
+              marginBottom: 24,
+              textAlign: "left",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.05)",
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", marginBottom: 4 }}>
+              Class Details
+            </div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", marginBottom: 6 }}>
+              {session.title || "Live Class"}
+            </div>
+            <div style={{ fontSize: 13, color: "#64748b", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div><strong>Course:</strong> {session.course?.title || session.courseTitle || "—"}</div>
+              <div><strong>Scheduled:</strong> {fmtTime(session.startTime)} - {fmtTime(session.endTime)}</div>
+              <div><strong>Duration:</strong> {session.duration || "60 mins"}</div>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={goBack}
+          style={{
+            padding: "12px 32px",
+            borderRadius: 12,
+            border: "none",
+            background: "linear-gradient(135deg,#FEBA01,#f5a800)",
+            color: "#000",
+            fontWeight: 700,
+            cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(254,186,1,0.25)",
+            transition: "transform 0.15s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   /* ══════════════════════════════════ CONNECTING / PREPARING ROOM ══════════════════ */
   if (status === "connecting") {

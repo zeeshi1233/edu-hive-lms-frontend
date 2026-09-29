@@ -236,7 +236,25 @@ export default function ClassCalendar() {
     setCurrentDate(new Date());
   };
 
+  const isSessionExpired = (s) => {
+    if (!s) return false;
+    if (s.isExpired) return true;
+    const end = s.endTime
+      ? new Date(s.endTime)
+      : s.startTime
+      ? new Date(new Date(s.startTime).getTime() + (parseInt(s.duration, 10) || 60) * 60000)
+      : null;
+    if (end && !isNaN(end.getTime()) && Date.now() > end.getTime()) {
+      return true;
+    }
+    return false;
+  };
+
   const joinClass = (session) => {
+    if (isSessionExpired(session)) {
+      notify.warning("This session has expired.");
+      return;
+    }
     const id = getSessionId(session);
     if (!id) {
       notify.warning("This class does not have a valid session id yet.");
@@ -771,6 +789,19 @@ export default function ClassCalendar() {
                               >
                                 No Teacher Assigned
                               </span>
+                            ) : isSessionExpired(sess) ? (
+                              <span
+                                className="badge bg-danger-subtle text-danger border border-danger d-inline-flex align-items-center gap-1"
+                                style={{
+                                  fontSize: "11px",
+                                  borderRadius: "8px",
+                                  padding: "6px 8px",
+                                  fontWeight: "600",
+                                }}
+                                title="This session has expired"
+                              >
+                                <Icon icon="solar:clock-circle-bold" width="13" /> Expired
+                              </span>
                             ) : (
                               <button
                                 onClick={() => joinClass(sess)}
@@ -991,21 +1022,31 @@ export default function ClassCalendar() {
                           </small>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn-dark fw-bold"
-                        style={{ borderRadius: "8px" }}
-                        disabled={joiningId === getSessionId(selectedSession)}
-                        onClick={() => joinClass(selectedSession)}
-                      >
-                        {joiningId === getSessionId(selectedSession) ? (
-                          <LmsLoader variant="button" label="Joining..." />
-                        ) : (
-                          <>
-                            Join Class <Icon icon="solar:videocamera-record-bold" />
-                          </>
-                        )}
-                      </button>
+                      {isSessionExpired(selectedSession) ? (
+                        <span
+                          className="badge bg-danger-subtle text-danger border border-danger px-3 py-2 fw-bold d-inline-flex align-items-center gap-1"
+                          style={{ borderRadius: "8px", fontSize: "12px" }}
+                        >
+                          <Icon icon="solar:clock-circle-bold" width="14" />
+                          Session Expired
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-dark fw-bold"
+                          style={{ borderRadius: "8px" }}
+                          disabled={joiningId === getSessionId(selectedSession)}
+                          onClick={() => joinClass(selectedSession)}
+                        >
+                          {joiningId === getSessionId(selectedSession) ? (
+                            <LmsLoader variant="button" label="Joining..." />
+                          ) : (
+                            <>
+                              Join Class <Icon icon="solar:videocamera-record-bold" />
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

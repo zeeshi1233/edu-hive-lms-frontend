@@ -52,7 +52,7 @@ const OngoingClasses = () => {
 
     const durMins = parseInt(s.duration, 10) || 60;
     const endMs = s.endTime ? new Date(s.endTime).getTime() : start.getTime() + durMins * 60000;
-    if (Date.now() > endMs && rawStatus !== "ongoing") {
+    if (s.isExpired || Date.now() > endMs) {
       return false;
     }
 

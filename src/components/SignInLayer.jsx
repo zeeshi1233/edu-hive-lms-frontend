@@ -1,11 +1,12 @@
 import { Icon } from "@iconify/react";
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axiosInstance from "../api/axiosInstance";
 import { useAuth } from "../context/AppContext";
 import Cookies from "js-cookie";
 const SignInLayer = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { setUser, setRole, setToken } = useAuth();
 const [showPassword, setShowPassword] = useState(false);
@@ -68,7 +69,9 @@ const [showPassword, setShowPassword] = useState(false);
       setRole(finalRole);
       setUser(userData);
 
-      navigate(redirectUrl);
+      const from = location.state?.from;
+      const targetUrl = from && from !== "/" ? from : redirectUrl;
+      navigate(targetUrl, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || "Login failed");
     } finally {

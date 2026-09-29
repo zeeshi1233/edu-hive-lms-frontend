@@ -47,6 +47,7 @@ const LectureSchedule = () => {
             ? "secondary"
             : "success",
         meetingLink: s.meetingLink,
+        isExpired: Boolean(s.isExpired || (s.endTime && Date.now() > new Date(s.endTime).getTime())),
         initials: s.course?.title?.substring(0, 2).toUpperCase() || "CS",
         initialsBg: "primary",
       }));
@@ -130,7 +131,21 @@ const LectureSchedule = () => {
                         </span>
                       </td>
                       <td className="text-center">
-                        {lec.hasTeacher && lec._id ? (
+                        {lec.isExpired ? (
+                          <span
+                            className="badge bg-danger-subtle text-danger border border-danger d-inline-flex align-items-center gap-1"
+                            style={{
+                              fontSize: "12px",
+                              padding: "6px 12px",
+                              borderRadius: "8px",
+                              fontWeight: "600",
+                            }}
+                            title="This session has expired"
+                          >
+                            <Icon icon="solar:clock-circle-bold" width="14" />
+                            Expired
+                          </span>
+                        ) : lec.hasTeacher && lec._id ? (
                           <button
                             type="button"
                             className="btn btn-sm"

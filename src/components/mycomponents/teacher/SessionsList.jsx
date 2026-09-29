@@ -55,10 +55,63 @@ const SessionsList = ({ viewAll }) => {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedType, setSelectedType] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const navigate = useNavigate();
   const canEditStatus = role === "admin";
+  const canExport = role === "admin" || role === "teacher";
   const showFilters = !viewAll;
+
+  const isSessionExpired = (s) => {
+    if (!s) return false;
+    if (s.isExpired) return true;
+    const end = s.endTime
+      ? new Date(s.endTime)
+      : s.startTime
+      ? new Date(new Date(s.startTime).getTime() + (parseInt(s.duration, 10) || 60) * 60000)
+      : null;
+    if (end && !isNaN(end.getTime()) && Date.now() > end.getTime()) {
+      return true;
+    }
+    return false;
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true);
+      const params = {};
+      if (selectedCourse) params.courseId = selectedCourse;
+      if (selectedStatus) params.status = selectedStatus;
+      if (selectedType) params.type = selectedType;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      if (searchQuery) params.search = searchQuery;
+
+      const res = await axiosInstance.get("/api/sessions/export", {
+        params,
+        responseType: "blob",
+      });
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      link.setAttribute("download", `sessions_export_${todayStr}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      notify.success("Sessions exported to Excel successfully!");
+    } catch (err) {
+      console.error("Export error:", err);
+      notify.error(err.response?.data?.message || "Failed to export sessions to Excel.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const getSessionsUrl = () => {
     if (role === "admin") return "/api/admin/sessions";
@@ -388,7 +441,7 @@ const SessionsList = ({ viewAll }) => {
 
   return (
     <div className="card p-20 border-0 rounded-4 shadow-sm">
-      <div className="card-header d-flex justify-content-between align-items-center border-0 px-0">
+      <div className="card-header d-flex flex-wrap justify-content-between align-items-center gap-3 border-0 px-0">
         <div>
           <h5 className="fw-bold m-0">Sessions</h5>
           <small className="text-muted">
@@ -399,6 +452,41 @@ const SessionsList = ({ viewAll }) => {
               : "Schedule new classes from the Class Calendar"}
           </small>
         </div>
+
+        {canExport && (
+          <button
+            type="button"
+            className="btn btn-sm d-flex align-items-center gap-2 fw-semibold"
+            style={{
+              background: "linear-gradient(135deg, #10B981, #059669)",
+              color: "#ffffff",
+              borderRadius: "10px",
+              padding: "9px 18px",
+              boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
+              border: "none",
+              fontSize: "13px",
+              cursor: exporting ? "not-allowed" : "pointer",
+              transition: "transform 0.15s, box-shadow 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              if (!exporting) e.currentTarget.style.transform = "translateY(-1px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            disabled={exporting}
+            onClick={handleExportExcel}
+          >
+            {exporting ? (
+              <LmsLoader variant="button" label="Exporting Excel..." />
+            ) : (
+              <>
+                <Icon icon="solar:file-download-bold" width="18" />
+                Export to Excel
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {showFilters && (
@@ -530,7 +618,7 @@ const SessionsList = ({ viewAll }) => {
                 </button>
 
                 {!isCancelled && (
-                  label === "Conducted" || Boolean(s.teacherAttendance?.checkOutTime) || isSessionEndedOrExpired(s) ? (
+                  label === "Conducted" || Boolean(s.teacherAttendance?.checkOutTime) ? (
                     <span
                       className="badge text-muted d-flex align-items-center"
                       style={{
@@ -541,6 +629,20 @@ const SessionsList = ({ viewAll }) => {
                       }}
                     >
                       Class Ended
+                    </span>
+                  ) : isSessionExpired(s) ? (
+                    <span
+                      className="badge bg-danger-subtle text-danger border border-danger d-inline-flex align-items-center gap-1"
+                      style={{
+                        fontSize: "12px",
+                        padding: "7px 12px",
+                        borderRadius: "8px",
+                        fontWeight: "600",
+                      }}
+                      title="This session has expired"
+                    >
+                      <Icon icon="solar:clock-circle-bold" width="14" />
+                      Session Expired
                     </span>
                   ) : role === "student" && (!s.teacher && !s.instructor && !s.teacherId) ? (
                     <span
