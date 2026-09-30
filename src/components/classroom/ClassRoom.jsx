@@ -639,7 +639,7 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
               </span>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>
-                  Live Attendance Tracking Active
+                  {heartbeatActive ? "Live Attendance Tracking Active" : "Connecting Live Attendance..."}
                 </div>
                 <div style={{ fontSize: 11, color: "#15803d" }}>
                   Automatic heartbeats verify presence and calculate exact active time.
