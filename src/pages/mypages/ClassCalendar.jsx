@@ -269,6 +269,19 @@ export default function ClassCalendar() {
     });
   };
 
+  const copyTrackedLink = async (session) => {
+    try {
+      const id = getSessionId(session);
+      if (!id) return;
+      const base = window.location.origin;
+      const trackedUrl = `${base}/api/sessions/join/${id}`;
+      await navigator.clipboard.writeText(trackedUrl);
+      notify.success("Tracked meeting link copied! Attendees will be verified and tracked.");
+    } catch (_) {
+      notify.error("Failed to copy link");
+    }
+  };
+
   const handleAddSession = async (e) => {
     e.preventDefault();
     if (saving) return;
@@ -1031,21 +1044,33 @@ export default function ClassCalendar() {
                           Session Expired
                         </span>
                       ) : (
-                        <button
-                          type="button"
-                          className="btn btn-dark fw-bold"
-                          style={{ borderRadius: "8px" }}
-                          disabled={joiningId === getSessionId(selectedSession)}
-                          onClick={() => joinClass(selectedSession)}
-                        >
-                          {joiningId === getSessionId(selectedSession) ? (
-                            <LmsLoader variant="button" label="Joining..." />
-                          ) : (
-                            <>
-                              Join Class <Icon icon="solar:videocamera-record-bold" />
-                            </>
-                          )}
-                        </button>
+                        <div className="d-flex align-items-center gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-outline-dark fw-bold btn-sm d-flex align-items-center gap-1"
+                            style={{ borderRadius: "8px", background: "rgba(255,255,255,0.7)" }}
+                            onClick={() => copyTrackedLink(selectedSession)}
+                            title="Copy tracked meeting link for external sharing"
+                          >
+                            <Icon icon="solar:copy-bold" width="16" />
+                            Copy Link
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-dark fw-bold"
+                            style={{ borderRadius: "8px" }}
+                            disabled={joiningId === getSessionId(selectedSession)}
+                            onClick={() => joinClass(selectedSession)}
+                          >
+                            {joiningId === getSessionId(selectedSession) ? (
+                              <LmsLoader variant="button" label="Joining..." />
+                            ) : (
+                              <>
+                                Join Class <Icon icon="solar:videocamera-record-bold" />
+                              </>
+                            )}
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}

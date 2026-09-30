@@ -431,6 +431,19 @@ const SessionsList = ({ viewAll }) => {
     }
   };
 
+  const copyTrackedLink = async (session) => {
+    try {
+      const id = session?._id || session?.id;
+      if (!id) return;
+      const base = window.location.origin;
+      const trackedUrl = `${base}/api/sessions/join/${id}`;
+      await navigator.clipboard.writeText(trackedUrl);
+      notify.success("Tracked meeting link copied! Attendees will be verified and tracked.");
+    } catch (_) {
+      notify.error("Failed to copy link");
+    }
+  };
+
   const badgeClass = (label) => {
     if (label === "Conducted") return "bg-success";
     if (label === "Not Conducted") return "bg-danger";
@@ -615,6 +628,18 @@ const SessionsList = ({ viewAll }) => {
                 >
                   <Icon icon="mdi:eye-outline" width="16" />
                   Detail
+                </button>
+
+                {/* Tracked Link button */}
+                <button
+                  type="button"
+                  className="btn btn-sm d-flex align-items-center gap-1 fw-semibold"
+                  style={{ background: "#EFF6FF", color: "#2563EB", borderRadius: "8px" }}
+                  onClick={() => copyTrackedLink(s)}
+                  title="Copy tracked meeting link for external sharing"
+                >
+                  <Icon icon="solar:link-bold" width="16" />
+                  Tracked Link
                 </button>
 
                 {!isCancelled && (
@@ -949,6 +974,33 @@ const SessionsList = ({ viewAll }) => {
                             </div>
                           </div>
                         ))}
+                      </div>
+
+                      {/* ── Secure Tracked Meeting Link ── */}
+                      <div
+                        className="p-3 rounded-3 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3"
+                        style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0" }}
+                      >
+                        <div style={{ flex: "1 1 300px" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#64748B", letterSpacing: 0.5 }}>
+                            Tracked LMS Meeting Link (Share with Students)
+                          </div>
+                          <div className="text-truncate mt-1" style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, fontFamily: "monospace" }}>
+                            {window.location.origin}/api/sessions/join/{detailSession._id}
+                          </div>
+                          <small className="text-muted d-block mt-1" style={{ fontSize: 11 }}>
+                            When users click this link, attendance check-in is logged automatically before entering the meeting.
+                          </small>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-sm d-flex align-items-center gap-1 fw-bold px-3 py-2"
+                          style={{ background: "#FEBA01", color: "#000", borderRadius: "8px" }}
+                          onClick={() => copyTrackedLink(detailSession)}
+                        >
+                          <Icon icon="solar:copy-bold" width="16" />
+                          Copy Tracked Link
+                        </button>
                       </div>
 
                       {/* ── Teacher Attendance ── */}

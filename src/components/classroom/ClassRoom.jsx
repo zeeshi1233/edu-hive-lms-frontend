@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
@@ -81,14 +81,29 @@ const StatusPill = ({ label }) => {
    Main Component
 ─────────────────────────────────────────────────────────────────────────── */
 const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave }) => {
+  const location   = useLocation();
   const navigate   = useNavigate();
   const leavingRef = useRef(false);
+  const autoLaunchedRef = useRef(false);
+
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const isAutoLaunch = queryParams.get("autoLaunch") === "true";
+  const tokenParam   = queryParams.get("token");
 
   const [status,   setStatus  ] = useState("connecting");
   const [error,    setError   ] = useState("");
   const [session,  setSession ] = useState(null);
   const [meetLink, setMeetLink] = useState("");
   const [checkIn]               = useState(new Date());
+  const [heartbeatActive, setHeartbeatActive] = useState(false);
+  const [activeDuration,  setActiveDuration ] = useState("0 mins");
+  const [copiedTracked,   setCopiedTracked  ] = useState(false);
+
+  useEffect(() => {
+    if (tokenParam && !localStorage.getItem("token")) {
+      localStorage.setItem("token", tokenParam);
+    }
+  }, [tokenParam]);
 
   const role      = (roleProp || localStorage.getItem("role") || "").toLowerCase();
   const isTeacher = role === "teacher";
@@ -259,6 +274,63 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
     if (sessionId) joinClassroom();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  // Auto-launch external meeting room if joining via tracked redirect
+  useEffect(() => {
+    if (status === "connected" && isAutoLaunch && meetLink && !autoLaunchedRef.current) {
+      if (meetLink.startsWith("http")) {
+        autoLaunchedRef.current = true;
+        window.open(meetLink, "_blank", "noopener,noreferrer");
+      }
+    }
+  }, [status, isAutoLaunch, meetLink]);
+
+  // Periodic Attendance Heartbeat: ping every 30s to accurately calculate active duration and prevent false hours
+  useEffect(() => {
+    if (status !== "connected" || !sessionId) return;
+
+    let isMounted = true;
+    const sendHeartbeat = async () => {
+      try {
+        const res = await axiosInstance.post(`/api/sessions/${sessionId}/heartbeat`);
+        if (!isMounted) return;
+        setHeartbeatActive(true);
+        if (res.data?.durationFormatted) {
+          setActiveDuration(res.data.durationFormatted);
+        }
+      } catch (hbErr) {
+        if (
+          hbErr.response?.data?.code === "SESSION_EXPIRED" ||
+          hbErr.response?.data?.code === "CLASS_ENDED"
+        ) {
+          if (isMounted) {
+            setStatus("expired");
+            setError("This class has ended or expired.");
+          }
+        }
+      }
+    };
+
+    sendHeartbeat();
+    const intervalId = setInterval(sendHeartbeat, 30000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [status, sessionId]);
+
+  const copyTrackedLink = async () => {
+    try {
+      const base = window.location.origin;
+      const trackedUrl = `${base}/api/sessions/join/${sessionId}`;
+      await navigator.clipboard.writeText(trackedUrl);
+      setCopiedTracked(true);
+      setTimeout(() => setCopiedTracked(false), 2500);
+    } catch (_) {
+      // fallback
+    }
+  };
 
   /* ══════════════════════════════════ EXPIRED SESSION ══════════════════ */
   if (status === "expired") {
@@ -529,6 +601,83 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
             </div>
           </div>
 
+          {/* Live Attendance Heartbeat Banner */}
+          <div style={{
+            background: "#f0fdf4",
+            border: "1.5px solid #bbf7d0",
+            borderRadius: 14,
+            padding: "12px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 20,
+            gap: 12,
+            flexWrap: "wrap",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{
+                position: "relative",
+                display: "flex",
+                width: 10,
+                height: 10,
+              }}>
+                <span style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "50%",
+                  background: "#22c55e",
+                  opacity: 0.75,
+                  animation: "ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
+                }} />
+                <span style={{
+                  position: "relative",
+                  borderRadius: "50%",
+                  width: 10,
+                  height: 10,
+                  background: "#16a34a",
+                }} />
+              </span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#166534" }}>
+                  Live Attendance Tracking Active
+                </div>
+                <div style={{ fontSize: 11, color: "#15803d" }}>
+                  Automatic heartbeats verify presence and calculate exact active time.
+                </div>
+              </div>
+            </div>
+            <div style={{
+              background: "#dcfce7",
+              border: "1px solid #86efac",
+              borderRadius: 8,
+              padding: "4px 10px",
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#166534",
+            }}>
+              Active Duration: {activeDuration}
+            </div>
+          </div>
+          <style>{`@keyframes ping{75%,100%{transform:scale(2);opacity:0}}`}</style>
+
+          {autoLaunchedRef.current && (
+            <div style={{
+              background: "#eff6ff",
+              border: "1.5px solid #bfdbfe",
+              borderRadius: 12,
+              padding: "12px 16px",
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 20,
+            }}>
+              <Icon icon="mdi:open-in-new" width={20} color="#2563eb" />
+              <div style={{ fontSize: 12, color: "#1e40af", lineHeight: 1.5 }}>
+                <strong>External meeting window launched!</strong> Keep this EduHive tab open in the background so your checkout and active duration are accurately calculated.
+              </div>
+            </div>
+          )}
+
           {/* Teacher host notice */}
           {isTeacher && (
             <div style={{
@@ -609,6 +758,27 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
                 You are already in the classroom
               </div>
             )}
+
+            {/* Copy Tracked Link Button */}
+            <button
+              onClick={copyTrackedLink}
+              style={{
+                flex: "1 1 170px",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                padding: "15px 18px",
+                borderRadius: 14,
+                border: copiedTracked ? "1.5px solid #86efac" : `1.5px solid ${T.border}`,
+                background: copiedTracked ? "#f0fdf4" : T.surface,
+                color: copiedTracked ? "#16a34a" : T.text,
+                fontSize: 14, fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+              title="Copy tracked meeting link for external sharing"
+            >
+              <Icon icon={copiedTracked ? "mdi:check-circle" : "solar:link-bold"} width={18} color={copiedTracked ? "#16a34a" : T.gold} />
+              {copiedTracked ? "Tracked Link Copied!" : "Copy Tracked Link"}
+            </button>
 
             {/* Leave */}
             <button
