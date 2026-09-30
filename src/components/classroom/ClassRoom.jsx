@@ -572,27 +572,43 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
 
           {/* ── Action Buttons ── */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {/* Launch Google Meet */}
-            <button
-              onClick={() => meetLink && window.open(meetLink, "_blank", "noopener,noreferrer")}
-              style={{
+            {/* Launch Google Meet — only show if there's a real Google Meet link */}
+            {meetLink && meetLink.startsWith("https://meet.google.com") ? (
+              <button
+                onClick={() => window.open(meetLink, "_blank", "noopener,noreferrer")}
+                style={{
+                  flex: "1 1 200px",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  padding: "15px 20px",
+                  borderRadius: 14, border: "none",
+                  background: `linear-gradient(135deg,${T.gold},#f5a800)`,
+                  color: T.black,
+                  fontSize: 15, fontWeight: 800,
+                  cursor: "pointer",
+                  boxShadow: `0 6px 24px ${T.goldSoft2}`,
+                  transition: "transform 0.15s, box-shadow 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 10px 32px ${T.goldSoft2}`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)";    e.currentTarget.style.boxShadow = `0 6px 24px ${T.goldSoft2}`; }}
+              >
+                <Icon icon="simple-icons:googlemeet" width={20} />
+                Launch Google Meet
+              </button>
+            ) : (
+              <div style={{
                 flex: "1 1 200px",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
                 padding: "15px 20px",
-                borderRadius: 14, border: "none",
-                background: `linear-gradient(135deg,${T.gold},#f5a800)`,
-                color: T.black,
-                fontSize: 15, fontWeight: 800,
-                cursor: "pointer",
-                boxShadow: `0 6px 24px ${T.goldSoft2}`,
-                transition: "transform 0.15s, box-shadow 0.15s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 10px 32px ${T.goldSoft2}`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)";    e.currentTarget.style.boxShadow = `0 6px 24px ${T.goldSoft2}`; }}
-            >
-              <Icon icon="simple-icons:googlemeet" width={20} />
-              Launch Google Meet
-            </button>
+                borderRadius: 14,
+                background: T.goldSoft,
+                border: `1.5px solid ${T.gold}55`,
+                color: T.goldDark,
+                fontSize: 14, fontWeight: 700,
+              }}>
+                <Icon icon="mdi:check-circle" width={20} color={T.gold} />
+                You are already in the classroom
+              </div>
+            )}
 
             {/* Leave */}
             <button
