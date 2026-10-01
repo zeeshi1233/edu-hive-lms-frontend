@@ -48,6 +48,7 @@ const SessionsList = ({ viewAll }) => {
   const [syncingId, setSyncingId] = useState("");
   const [detailSession, setDetailSession] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [copiedTracked, setCopiedTracked] = useState(false);
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -436,6 +437,8 @@ const SessionsList = ({ viewAll }) => {
       const trackedUrl = getTrackedSessionJoinUrl(session);
       if (!trackedUrl) return;
       await navigator.clipboard.writeText(trackedUrl);
+      setCopiedTracked(true);
+      setTimeout(() => setCopiedTracked(false), 2000);
       notify.success("Tracked meeting link copied! Attendees will be verified and tracked.");
     } catch (_) {
       notify.error("Failed to copy link");
@@ -975,31 +978,74 @@ const SessionsList = ({ viewAll }) => {
                       </div>
 
                       {/* ── Secure Tracked Meeting Link ── */}
-                      <div
-                        className="p-3 rounded-3 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3"
-                        style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0" }}
-                      >
-                        <div style={{ flex: "1 1 300px" }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#64748B", letterSpacing: 0.5 }}>
-                            Tracked LMS Meeting Link (Share with Students)
+                      {(() => {
+                        const trackedUrl = getTrackedSessionJoinUrl(detailSession) || "";
+                        const displayUrl =
+                          trackedUrl.length > 45
+                            ? `${trackedUrl.slice(0, 42)}...`
+                            : trackedUrl;
+
+                        return (
+                          <div
+                            className="p-3 rounded-3 mb-4"
+                            style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0" }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                color: "#64748B",
+                                letterSpacing: 0.5,
+                                marginBottom: "8px",
+                              }}
+                            >
+                              Tracked LMS Meeting Link (Share with Students)
+                            </div>
+                            <div className="d-flex align-items-center gap-2 flex-wrap flex-sm-nowrap">
+                              <div
+                                className="px-3 py-2 rounded-2 text-truncate flex-grow-1"
+                                title={trackedUrl}
+                                style={{
+                                  background: "#FFFFFF",
+                                  border: "1px solid #CBD5E1",
+                                  fontSize: 13,
+                                  color: "#0F172A",
+                                  fontWeight: 600,
+                                  fontFamily: "monospace",
+                                  minWidth: 0,
+                                  userSelect: "all",
+                                }}
+                              >
+                                {displayUrl}
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-sm d-flex align-items-center justify-content-center gap-1 fw-bold px-3 py-2 flex-shrink-0"
+                                style={{
+                                  background: copiedTracked ? "#10B981" : "#FEBA01",
+                                  color: copiedTracked ? "#FFF" : "#000",
+                                  borderRadius: "8px",
+                                  height: "38px",
+                                  minWidth: "155px",
+                                  transition: "all 0.2s ease",
+                                }}
+                                onClick={() => copyTrackedLink(detailSession)}
+                                title="Copy full tracked link"
+                              >
+                                <Icon
+                                  icon={copiedTracked ? "solar:check-circle-bold" : "solar:copy-bold"}
+                                  width="16"
+                                />
+                                {copiedTracked ? "Copied!" : "Copy Tracked Link"}
+                              </button>
+                            </div>
+                            <small className="text-muted d-block mt-2" style={{ fontSize: 11 }}>
+                              When users click this link, attendance check-in is logged automatically before entering the meeting.
+                            </small>
                           </div>
-                          <div className="text-truncate mt-1" style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, fontFamily: "monospace" }}>
-                            {getTrackedSessionJoinUrl(detailSession)}
-                          </div>
-                          <small className="text-muted d-block mt-1" style={{ fontSize: 11 }}>
-                            When users click this link, attendance check-in is logged automatically before entering the meeting.
-                          </small>
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-sm d-flex align-items-center gap-1 fw-bold px-3 py-2"
-                          style={{ background: "#FEBA01", color: "#000", borderRadius: "8px" }}
-                          onClick={() => copyTrackedLink(detailSession)}
-                        >
-                          <Icon icon="solar:copy-bold" width="16" />
-                          Copy Tracked Link
-                        </button>
-                      </div>
+                        );
+                      })()}
 
                       {/* ── Teacher Attendance ── */}
                       {(() => {
