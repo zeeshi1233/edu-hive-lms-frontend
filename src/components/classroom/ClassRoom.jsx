@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Icon } from "@iconify/react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
+import { getTrackedSessionJoinUrl } from "../../utils/livekitRoom";
 
 /* ─── helpers ─────────────────────────────────────────────────────────────── */
 const fmt = (date, opts) =>
@@ -89,6 +90,7 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const isAutoLaunch = queryParams.get("autoLaunch") === "true";
   const tokenParam   = queryParams.get("token");
+  const errorParam   = queryParams.get("error");
 
   const [status,   setStatus  ] = useState("connecting");
   const [error,    setError   ] = useState("");
@@ -104,6 +106,24 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
       localStorage.setItem("token", tokenParam);
     }
   }, [tokenParam]);
+
+  useEffect(() => {
+    if (errorParam) {
+      if (errorParam === "expired") {
+        setStatus("expired");
+        setError("This session has expired.");
+      } else if (errorParam === "cancelled") {
+        setStatus("error");
+        setError("This session has been cancelled.");
+      } else if (errorParam === "ended") {
+        setStatus("error");
+        setError("This session has already ended.");
+      } else {
+        setStatus("error");
+        setError(decodeURIComponent(errorParam));
+      }
+    }
+  }, [errorParam]);
 
   const role      = (roleProp || localStorage.getItem("role") || "").toLowerCase();
   const isTeacher = role === "teacher";
@@ -322,8 +342,8 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
 
   const copyTrackedLink = async () => {
     try {
-      const base = window.location.origin;
-      const trackedUrl = `${base}/api/sessions/join/${sessionId}`;
+      const trackedUrl = getTrackedSessionJoinUrl(sessionId);
+      if (!trackedUrl) return;
       await navigator.clipboard.writeText(trackedUrl);
       setCopiedTracked(true);
       setTimeout(() => setCopiedTracked(false), 2500);
@@ -721,8 +741,8 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
 
           {/* ── Action Buttons ── */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {/* Launch Google Meet — only show if there's a real Google Meet link */}
-            {meetLink && meetLink.startsWith("https://meet.google.com") ? (
+            {/* Launch Meeting (Google Meet or Zoom) */}
+            {meetLink && (meetLink.startsWith("http://") || meetLink.startsWith("https://")) ? (
               <button
                 onClick={() => window.open(meetLink, "_blank", "noopener,noreferrer")}
                 style={{
@@ -740,8 +760,15 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 10px 32px ${T.goldSoft2}`; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)";    e.currentTarget.style.boxShadow = `0 6px 24px ${T.goldSoft2}`; }}
               >
-                <Icon icon="simple-icons:googlemeet" width={20} />
-                Launch Google Meet
+                <Icon
+                  icon={
+                    meetLink.includes("zoom.us")
+                      ? "logos:zoom-icon"
+                      : "simple-icons:googlemeet"
+                  }
+                  width={20}
+                />
+                {meetLink.includes("zoom.us") ? "Launch Zoom Meeting" : "Launch Google Meet"}
               </button>
             ) : (
               <div style={{

@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
-import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom";
+import { getClassroomPath, getLiveKitRoomName, getTrackedSessionJoinUrl } from "../../../utils/livekitRoom";
 import LmsAsyncState from "../../common/LmsAsyncState";
 import LmsLoader from "../../common/LmsLoader";
+import notify from "../../../utils/notify";
 
 const LectureSchedule = () => {
   const [lectures, setLectures] = useState([]);
@@ -14,6 +15,17 @@ const LectureSchedule = () => {
   const navigate = useNavigate();
 
   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+
+  const copyTrackedLink = async (session) => {
+    try {
+      const trackedUrl = getTrackedSessionJoinUrl(session);
+      if (!trackedUrl) return;
+      await navigator.clipboard.writeText(trackedUrl);
+      notify.success("Tracked session link copied!");
+    } catch (_) {
+      notify.error("Failed to copy link");
+    }
+  };
 
   const fetchSessions = async () => {
     try {
@@ -147,27 +159,38 @@ const LectureSchedule = () => {
                             Expired
                           </span>
                         ) : lec.hasTeacher && lec._id ? (
-                          <button
-                            type="button"
-                            className="btn btn-sm"
-                            style={{ background: "#FEBA01", color: "#000", fontWeight: "600" }}
-                            disabled={joiningId === lec._id}
-                            onClick={() => {
-                              setJoiningId(lec._id);
-                              navigate(getClassroomPath(lec), {
-                                state: {
-                                  roomName: getLiveKitRoomName(lec),
-                                  classTitle: lec.title || lec.subject,
-                                },
-                              });
-                            }}
-                          >
-                            {joiningId === lec._id ? (
-                              <LmsLoader variant="button" label="Joining..." />
-                            ) : (
-                              "Join Class"
-                            )}
-                          </button>
+                          <div className="d-flex align-items-center justify-content-center gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center"
+                              style={{ width: "32px", height: "32px", borderRadius: "8px" }}
+                              title="Copy Tracked Link"
+                              onClick={() => copyTrackedLink(lec)}
+                            >
+                              <Icon icon="solar:copy-bold" width={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              style={{ background: "#FEBA01", color: "#000", fontWeight: "600" }}
+                              disabled={joiningId === lec._id}
+                              onClick={() => {
+                                setJoiningId(lec._id);
+                                navigate(getClassroomPath(lec), {
+                                  state: {
+                                    roomName: getLiveKitRoomName(lec),
+                                    classTitle: lec.title || lec.subject,
+                                  },
+                                });
+                              }}
+                            >
+                              {joiningId === lec._id ? (
+                                <LmsLoader variant="button" label="Joining..." />
+                              ) : (
+                                "Join Class"
+                              )}
+                            </button>
+                          </div>
                         ) : (
                           <span
                             className="badge text-muted"

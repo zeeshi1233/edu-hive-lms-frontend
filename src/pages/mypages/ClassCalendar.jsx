@@ -13,7 +13,7 @@ import {
   persistScheduledClasses,
   toCourseSelectOptions,
 } from "../../utils/lmsData";
-import { getClassroomPath, getLiveKitRoomName, getSessionId } from "../../utils/livekitRoom";
+import { getClassroomPath, getLiveKitRoomName, getSessionId, getTrackedSessionJoinUrl } from "../../utils/livekitRoom";
 import LmsLoader from "../../components/common/LmsLoader";
 import LmsAsyncState from "../../components/common/LmsAsyncState";
 import notify from "../../utils/notify";
@@ -271,10 +271,8 @@ export default function ClassCalendar() {
 
   const copyTrackedLink = async (session) => {
     try {
-      const id = getSessionId(session);
-      if (!id) return;
-      const base = window.location.origin;
-      const trackedUrl = `${base}/api/sessions/join/${id}`;
+      const trackedUrl = getTrackedSessionJoinUrl(session);
+      if (!trackedUrl) return;
       await navigator.clipboard.writeText(trackedUrl);
       notify.success("Tracked meeting link copied! Attendees will be verified and tracked.");
     } catch (_) {

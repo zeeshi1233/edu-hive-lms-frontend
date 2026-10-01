@@ -10,7 +10,7 @@ import {
   hasValidCourseLabel,
   toCourseSelectOptions,
 } from "../../../utils/lmsData";
-import { getClassroomPath } from "../../../utils/livekitRoom";
+import { getClassroomPath, getTrackedSessionJoinUrl } from "../../../utils/livekitRoom";
 import LmsAsyncState from "../../common/LmsAsyncState";
 import LmsLoader from "../../common/LmsLoader";
 import LmsFilterBar from "../../common/LmsFilterBar";
@@ -433,10 +433,8 @@ const SessionsList = ({ viewAll }) => {
 
   const copyTrackedLink = async (session) => {
     try {
-      const id = session?._id || session?.id;
-      if (!id) return;
-      const base = window.location.origin;
-      const trackedUrl = `${base}/api/sessions/join/${id}`;
+      const trackedUrl = getTrackedSessionJoinUrl(session);
+      if (!trackedUrl) return;
       await navigator.clipboard.writeText(trackedUrl);
       notify.success("Tracked meeting link copied! Attendees will be verified and tracked.");
     } catch (_) {
@@ -986,7 +984,7 @@ const SessionsList = ({ viewAll }) => {
                             Tracked LMS Meeting Link (Share with Students)
                           </div>
                           <div className="text-truncate mt-1" style={{ fontSize: 13, color: "#0F172A", fontWeight: 600, fontFamily: "monospace" }}>
-                            {window.location.origin}/api/sessions/join/{detailSession._id}
+                            {getTrackedSessionJoinUrl(detailSession)}
                           </div>
                           <small className="text-muted d-block mt-1" style={{ fontSize: 11 }}>
                             When users click this link, attendance check-in is logged automatically before entering the meeting.

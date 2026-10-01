@@ -4,8 +4,9 @@ import "datatables.net-dt/js/dataTables.dataTables.js";
 import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
-import { getClassroomPath, getLiveKitRoomName } from "../../../utils/livekitRoom";
+import { getClassroomPath, getLiveKitRoomName, getTrackedSessionJoinUrl } from "../../../utils/livekitRoom";
 import LmsAsyncState from "../../common/LmsAsyncState";
+import notify from "../../../utils/notify";
 
 const OngoingClasses = () => {
   const tableRef = useRef(null);
@@ -14,6 +15,17 @@ const OngoingClasses = () => {
   const [error, setError] = useState("");
   const [joiningId, setJoiningId] = useState("");
   const navigate = useNavigate();
+
+  const copyTrackedLink = async (session) => {
+    try {
+      const trackedUrl = getTrackedSessionJoinUrl(session);
+      if (!trackedUrl) return;
+      await navigator.clipboard.writeText(trackedUrl);
+      notify.success("Tracked meeting link copied!");
+    } catch (_) {
+      notify.error("Failed to copy link");
+    }
+  };
 
   const getSessions = async () => {
     try {
@@ -117,31 +129,47 @@ const OngoingClasses = () => {
                     </span>
                   </td>
                   <td>
-                    <button
-                      className="btn d-flex align-items-center justify-content-center"
-                      style={{
-                        width: "42px",
-                        height: "42px",
-                        borderRadius: "8px",
-                        background: "#FEBA01",
-                      }}
-                      disabled={joiningId === cls._id}
-                      onClick={() => {
-                        setJoiningId(cls._id);
-                        navigate(getClassroomPath(cls), {
-                          state: {
-                            roomName: getLiveKitRoomName(cls),
-                            classTitle: cls.course?.title || cls.title || "Live Class",
-                          },
-                        });
-                      }}
-                    >
-                      {joiningId === cls._id ? (
-                        <span className="lms-spinner lms-spinner-sm" />
-                      ) : (
-                        <Icon icon="mdi:video" width={22} />
-                      )}
-                    </button>
+                    <div className="d-flex align-items-center gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary d-flex align-items-center justify-content-center"
+                        style={{
+                          width: "38px",
+                          height: "38px",
+                          borderRadius: "8px",
+                        }}
+                        title="Copy Tracked Link"
+                        onClick={() => copyTrackedLink(cls)}
+                      >
+                        <Icon icon="solar:copy-bold" width={18} />
+                      </button>
+                      <button
+                        className="btn d-flex align-items-center justify-content-center"
+                        style={{
+                          width: "38px",
+                          height: "38px",
+                          borderRadius: "8px",
+                          background: "#FEBA01",
+                        }}
+                        title="Enter Classroom"
+                        disabled={joiningId === cls._id}
+                        onClick={() => {
+                          setJoiningId(cls._id);
+                          navigate(getClassroomPath(cls), {
+                            state: {
+                              roomName: getLiveKitRoomName(cls),
+                              classTitle: cls.course?.title || cls.title || "Live Class",
+                            },
+                          });
+                        }}
+                      >
+                        {joiningId === cls._id ? (
+                          <span className="lms-spinner lms-spinner-sm" />
+                        ) : (
+                          <Icon icon="mdi:video" width={20} />
+                        )}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
