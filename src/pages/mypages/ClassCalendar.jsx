@@ -82,7 +82,6 @@ export default function ClassCalendar() {
     duration: "60 mins",
     type: "Regular Class",
     description: "",
-    meetingLink: "",
   };
 
   const [newSession, setNewSession] = useState(emptySession);
@@ -321,8 +320,6 @@ export default function ClassCalendar() {
         type: newSession.type,
         duration: newSession.duration,
         description: newSession.description,
-        meetingLink: (newSession.meetingLink || "").trim(),
-        googleMeetLink: (newSession.meetingLink || "").trim(),
       };
       const res = await axiosInstance.post("/api/admin/sessions", payload);
       const saved = res.data?.session || res.data?.data || res.data;
@@ -1372,31 +1369,6 @@ export default function ClassCalendar() {
                             </option>
                           ))}
                         </select>
-                      </div>
-
-                      <div className="col-12">
-                        <label className="form-label fw-bold mb-2">
-                          Meeting Link (Optional)
-                        </label>
-                        <input
-                          type="url"
-                          placeholder="e.g. https://meet.google.com/xxx-yyyy-zzz or Zoom link (leave blank to auto-create)"
-                          value={newSession.meetingLink || ""}
-                          onChange={(e) =>
-                            setNewSession({ ...newSession, meetingLink: e.target.value })
-                          }
-                          style={{
-                            width: "100%",
-                            padding: "12px 14px",
-                            borderRadius: "10px",
-                            border: `1px solid ${borderColor}`,
-                            background: inputBg,
-                            color: textColor,
-                          }}
-                        />
-                        <small style={{ color: isDark ? "#94a3b8" : "#64748b", fontSize: "12px", marginTop: "4px", display: "block" }}>
-                          Paste your custom Google Meet or Zoom meeting link. If left blank, a video meeting room will be automatically created.
-                        </small>
                       </div>
 
                       <div className="col-12">
