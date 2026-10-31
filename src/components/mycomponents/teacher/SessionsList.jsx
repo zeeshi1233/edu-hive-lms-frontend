@@ -125,7 +125,7 @@ const SessionsList = ({ viewAll }) => {
     try {
       setLoading(true);
       setError("");
-      const res = await axiosInstance.get(getSessionsUrl());
+      const res = await axiosInstance.get(getSessionsUrl(), { params: { sort: "desc" } });
       setSessions(extractList(res, ["sessions", "data"]));
 
       if (role === "admin") {
@@ -238,7 +238,7 @@ const SessionsList = ({ viewAll }) => {
     const end = dayStart(endDate);
     const q = searchQuery.trim().toLowerCase();
 
-    return sessions.filter((s) => {
+    const filtered = sessions.filter((s) => {
       const sessionDay = dayStart(s.startTime || s.date);
       if (start && sessionDay && sessionDay < start) return false;
       if (end && sessionDay && sessionDay > end) return false;
@@ -279,6 +279,13 @@ const SessionsList = ({ viewAll }) => {
       }
 
       return true;
+    });
+
+    // Ensure latest session is on top (descending by timestamp)
+    return [...filtered].sort((a, b) => {
+      const tA = new Date(a.startTime || a.date || a.createdAt || 0).getTime();
+      const tB = new Date(b.startTime || b.date || b.createdAt || 0).getTime();
+      return tB - tA;
     });
   }, [
     sessions,
