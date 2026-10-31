@@ -100,6 +100,10 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
   const [heartbeatActive, setHeartbeatActive] = useState(false);
   const [activeDuration,  setActiveDuration ] = useState("0 mins");
   const [copiedTracked,   setCopiedTracked  ] = useState(false);
+  const [showEditLink,    setShowEditLink   ] = useState(false);
+  const [customLinkInput, setCustomLinkInput] = useState("");
+  const [savingLink,      setSavingLink     ] = useState(false);
+  const [saveLinkMsg,     setSaveLinkMsg    ] = useState("");
 
   useEffect(() => {
     if (tokenParam && !localStorage.getItem("token")) {
@@ -127,6 +131,29 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
 
   const role      = (roleProp || localStorage.getItem("role") || "").toLowerCase();
   const isTeacher = role === "teacher";
+  const isAdmin   = role === "admin";
+  const canManageMeeting = isAdmin || isTeacher;
+
+  const handleSaveMeetingLink = async (urlToSave) => {
+    const url = (urlToSave !== undefined ? urlToSave : customLinkInput).trim();
+    if (!sessionId) return;
+    setSavingLink(true);
+    setSaveLinkMsg("");
+    try {
+      const res = await axiosInstance.post(`/api/sessions/${sessionId}/meeting-link`, {
+        meetingLink: url,
+      });
+      const updatedLink = res.data?.meetingLink || url;
+      setMeetLink(updatedLink);
+      setShowEditLink(false);
+      setSaveLinkMsg("Meeting link updated successfully!");
+      setTimeout(() => setSaveLinkMsg(""), 3500);
+    } catch (err) {
+      setSaveLinkMsg(err.response?.data?.message || "Failed to update link");
+    } finally {
+      setSavingLink(false);
+    }
+  };
 
   const displayName = useMemo(
     () => userName || localStorage.getItem("userName") || "Participant",
@@ -232,13 +259,22 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
         }
       }
 
-      const link =
+      let link =
         res.data?.googleMeetLink ||
         sessionData?.googleMeetLink ||
-        sessionData?.link ||
-        sessionData?.meetingLink;
-      if (!link) throw new Error("Video room link not found. Please contact admin.");
+        sessionData?.rawMeetingLink;
+
+      if (!link || !link.startsWith("http")) {
+        const candidate = sessionData?.meetingLink || sessionData?.link;
+        if (candidate && candidate.startsWith("http")) {
+          link = candidate;
+        } else {
+          link = `https://meet.jit.si/eduhive-${sessionId}`;
+        }
+      }
+
       setMeetLink(link);
+      setCustomLinkInput(link);
       setSession(sessionData);
       setStatus("connected");
     } catch (err) {
@@ -272,17 +308,25 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
             return;
           }
         }
-        const fallbackLink =
+        let fallbackLink =
           fallbackRes.data?.googleMeetLink ||
           fallbackSession?.googleMeetLink ||
-          fallbackSession?.link ||
-          fallbackSession?.meetingLink;
-        if (fallbackLink) {
-          setMeetLink(fallbackLink);
-          setSession(fallbackSession);
-          setStatus("connected");
-          return;
+          fallbackSession?.rawMeetingLink;
+
+        if (!fallbackLink || !fallbackLink.startsWith("http")) {
+          const candidate = fallbackSession?.meetingLink || fallbackSession?.link;
+          if (candidate && candidate.startsWith("http")) {
+            fallbackLink = candidate;
+          } else {
+            fallbackLink = `https://meet.jit.si/eduhive-${sessionId}`;
+          }
         }
+
+        setMeetLink(fallbackLink);
+        setCustomLinkInput(fallbackLink);
+        setSession(fallbackSession);
+        setStatus("connected");
+        return;
       } catch (_) {}
 
       setStatus("error");
@@ -739,9 +783,111 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
             </p>
           )}
 
+          {/* Meeting Link Manager for Admin/Teacher */}
+          {canManageMeeting && (
+            <div style={{
+              background: T.surface2,
+              border: `1.5px solid ${T.border}`,
+              borderRadius: 14,
+              padding: "12px 16px",
+              marginBottom: 16,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Icon icon="solar:videocamera-record-bold" width={18} color={T.gold} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
+                    Video Room: {meetLink && meetLink.includes("meet.google.com") ? "Google Meet" : meetLink && meetLink.includes("zoom.us") ? "Zoom" : "Live Video Classroom"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomLinkInput(meetLink || "");
+                    setShowEditLink(!showEditLink);
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: T.goldDark,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <Icon icon={showEditLink ? "mdi:chevron-up" : "solar:pen-bold"} width={14} />
+                  {showEditLink ? "Close" : "Change Meeting Link"}
+                </button>
+              </div>
+
+              {showEditLink && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input
+                      type="url"
+                      placeholder="Paste Google Meet or Zoom URL (e.g. https://meet.google.com/...)"
+                      value={customLinkInput}
+                      onChange={(e) => setCustomLinkInput(e.target.value)}
+                      style={{
+                        flex: "1 1 240px",
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: `1.5px solid ${T.border}`,
+                        fontSize: 13,
+                        outline: "none",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={savingLink || !customLinkInput.trim()}
+                      onClick={() => handleSaveMeetingLink(customLinkInput)}
+                      style={{
+                        padding: "10px 18px",
+                        borderRadius: 10,
+                        border: "none",
+                        background: T.gold,
+                        color: T.black,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {savingLink ? "Saving..." : "Save Link"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingLink}
+                      onClick={() => handleSaveMeetingLink(`https://meet.jit.si/eduhive-${sessionId}`)}
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 10,
+                        border: `1px solid ${T.border}`,
+                        background: T.surface,
+                        color: T.muted,
+                        fontWeight: 600,
+                        fontSize: 12,
+                        cursor: "pointer",
+                      }}
+                      title="Reset to a free, instant EduHive video room"
+                    >
+                      Reset Room
+                    </button>
+                  </div>
+                  {saveLinkMsg && (
+                    <span style={{ fontSize: 12, color: saveLinkMsg.includes("success") ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                      {saveLinkMsg}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Action Buttons ── */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {/* Launch Meeting (Google Meet or Zoom) */}
+            {/* Launch Meeting (Google Meet, Zoom, or Video Classroom) */}
             {meetLink && (meetLink.startsWith("http://") || meetLink.startsWith("https://")) ? (
               <button
                 onClick={() => window.open(meetLink, "_blank", "noopener,noreferrer")}
@@ -764,11 +910,17 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
                   icon={
                     meetLink.includes("zoom.us")
                       ? "logos:zoom-icon"
-                      : "simple-icons:googlemeet"
+                      : meetLink.includes("meet.google.com")
+                      ? "simple-icons:googlemeet"
+                      : "solar:videocamera-record-bold"
                   }
                   width={20}
                 />
-                {meetLink.includes("zoom.us") ? "Launch Zoom Meeting" : "Launch Google Meet"}
+                {meetLink.includes("zoom.us")
+                  ? "Launch Zoom Meeting"
+                  : meetLink.includes("meet.google.com")
+                  ? "Launch Google Meet"
+                  : "Launch Video Class"}
               </button>
             ) : (
               <div style={{
@@ -781,8 +933,8 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
                 color: T.goldDark,
                 fontSize: 14, fontWeight: 700,
               }}>
-                <Icon icon="mdi:check-circle" width={20} color={T.gold} />
-                You are already in the classroom
+                <Icon icon="solar:clock-circle-bold" width={20} color={T.gold} />
+                Connecting to video room...
               </div>
             )}
 
