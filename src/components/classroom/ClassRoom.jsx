@@ -269,7 +269,7 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
         if (candidate && candidate.startsWith("http")) {
           link = candidate;
         } else {
-          link = `https://meet.jit.si/eduhive-${sessionId}`;
+          link = `https://meet.google.com/new`;
         }
       }
 
@@ -318,7 +318,7 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
           if (candidate && candidate.startsWith("http")) {
             fallbackLink = candidate;
           } else {
-            fallbackLink = `https://meet.jit.si/eduhive-${sessionId}`;
+            fallbackLink = `https://meet.google.com/new`;
           }
         }
 
@@ -859,7 +859,7 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
                     <button
                       type="button"
                       disabled={savingLink}
-                      onClick={() => handleSaveMeetingLink(`https://meet.jit.si/eduhive-${sessionId}`)}
+                      onClick={() => handleSaveMeetingLink(`https://meet.google.com/new`)}
                       style={{
                         padding: "10px 14px",
                         borderRadius: 10,
@@ -870,9 +870,9 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
                         fontSize: 12,
                         cursor: "pointer",
                       }}
-                      title="Reset to a free, instant EduHive video room"
+                      title="Reset to default Google Meet"
                     >
-                      Reset Room
+                      Reset Google Meet
                     </button>
                   </div>
                   {saveLinkMsg && (
@@ -920,7 +920,7 @@ const ClassRoom = ({ userName, sessionId, classTitle, role: roleProp, onLeave })
                   ? "Launch Zoom Meeting"
                   : meetLink.includes("meet.google.com")
                   ? "Launch Google Meet"
-                  : "Launch Video Class"}
+                  : "Launch Google Meet"}
               </button>
             ) : (
               <div style={{
